@@ -18,8 +18,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 console.log(
-    user: process.env.MAIN_USER,
-    pass: process.env.MAIN_PASS);
+     process.env.MAIN_USER,
+    process.env.MAIN_PASS);
 
 const getAllUsers = async () => {
     let user = [];
