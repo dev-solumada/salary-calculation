@@ -107,19 +107,19 @@ router.route('/login').all(redirectHome, (req, res) => {
                     target: 'password',
                     message: 'Your password is wrong'
                 });
+                // check access
+                if (!find_user.access) {
+                    data.push({
+                        target: 'access',
+                        message: 'Sorry, your access is closed. Please, contact the admin.'
+                    });
+                }
             } else {
                 data.push({
                     target: 'username',
                     message: 'The username doesn\'t exist.'
                 });
             } 
-            // check access
-            if (!find_user.access) {
-                data.push({
-                    target: 'access',
-                    message: 'Sorry, your access is closed. Please, contact the admin.'
-                });
-            }
     
             // if data is not empty
             if (data.length > 0) {
