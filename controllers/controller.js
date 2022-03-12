@@ -8,6 +8,19 @@ const UserSchema = require('../models/UserSchema');
 const SCSchema = require('../models/SCSchema');
 const nodemailer = require('nodemailer');
 const moment = require('moment');
+const { google } = require("googleapis");
+const OAuth2 = google.auth.OAuth2;
+
+const oauth2Client = new OAuth2(
+    process.env.APP_CLIENT_ID, // ClientID
+    process.env.APP_CLIENT_SECRET, // Client Secret
+    "https://developers.google.com/oauthplayground" // Redirect URL
+);
+
+oauth2Client.setCredentials({
+    refresh_token: process.env.REFRESH_TOKEN
+});
+const accessToken = oauth2Client.getAccessToken();
 
 //Mailing
 const transporter = nodemailer.createTransport({
@@ -15,11 +28,16 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.MAIN_USER,
     pass: process.env.MAIN_PASS,
+    clientId: process.env.APP_CLIENT_ID,
+    clientSecret: process.env.APP_CLIENT_SECRET,
+    refreshToken: process.env.REFRESH_TOKEN,
+    accessToken: accessToken
   },
+  tls: {
+    rejectUnauthorized: false
+  }
 });
-console.log(
-     process.env.MAIN_USER,
-    process.env.MAIN_PASS);
+
 
 const getAllUsers = async () => {
     let user = [];
@@ -448,9 +466,8 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
                     </div>`,
                 };
                 await transporter.sendMail(mailOptions, function (error, info) {
-                    if (error) {
-                        console.log(error);
-                    }
+                    error ? console.log(error) : console.log(info);
+                    transporter.close();
                 });
             }
             
