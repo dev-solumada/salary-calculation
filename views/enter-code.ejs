@@ -5,7 +5,7 @@
   <!-- Required meta tags -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-  <title>Login</title>
+  <title>Validation code</title>
   <!-- plugins:css -->
   <link rel="stylesheet" href="/vendors/ti-icons/css/themify-icons.css">
   <link rel="stylesheet" href="/vendors/base/vendor.bundle.base.css">
@@ -29,29 +29,18 @@
                 <img src="/images/optumin-solution.png" alt="logo">
                 <!-- <img src="/images/Logo-Solumada-01.jpg" alt="logo"> -->
               </div>
-              <h4>Welcome to Salary Calculation</h4>
-              <h6 class="font-weight-light">Happy to see you again!</h6>
-              <form class="pt-3" method="post" action="/login">
+              <h4>Code for validation</h4>
+              <h6 class="font-weight-light">Please check your email address to get the code.</h6>
+              <form class="pt-3" method="post" action="/enter-code">
                 <div class="form-group">
-                  <label for="exampleInputEmail">Username</label>
+                  <label for="exampleInputEmail">Code</label>
                   <div class="input-group">
                     <div class="input-group-prepend bg-transparent">
                       <span class="input-group-text bg-transparent border-right-0">
                         <i class="ti-user text-primary"></i>
                       </span>
                     </div>
-                    <input type="text" class="form-control form-control-lg border-left-0" name="username" id="username" placeholder="Username">
-                  </div>
-                </div>
-                <div class="form-group">
-                  <label for="exampleInputPassword">Password</label>
-                  <div class="input-group">
-                    <div class="input-group-prepend bg-transparent">
-                      <span class="input-group-text bg-transparent border-right-0">
-                        <i class="ti-lock text-primary"></i>
-                      </span>
-                    </div>
-                    <input type="password" class="form-control form-control-lg border-left-0" name="password" id="password" placeholder="Password">                        
+                    <input type="text" class="form-control form-control-lg border-left-0" name="code" id="code" placeholder="Username">
                   </div>
                 </div>
                 <div class="my-2 d-flex justify-content-between align-items-center">
@@ -61,10 +50,10 @@
                       Keep me signed in
                     </label> -->
                   </div>
-                  <a href="/forgot-password" class="auth-link text-black">Forgot password?</a>
+                  <a href="/forgot-password" class="auth-link text-black">go back</a>
                 </div>
                 <div class="my-3">
-                  <button type="submit" id="submit" class="btn btn-block btn-primary btn-lg font-weight-medium auth-form-btn text-white">LOGIN</button>
+                  <button type="submit" id="submit" class="btn btn-block btn-primary btn-lg font-weight-medium auth-form-btn text-white">SUBMIT</button>
                   <img src="/images/loading-gif-15.gif" alt="loading..." draggable="false" id="loading-gif" style="width: 110px;opacity: 0;">
                 </div>
               </form>
@@ -91,38 +80,26 @@
   <script src="/js/sweetalert.min.js"></script>
   <!-- endinject -->
   <script>
+    let fieldforpass = document.getElementById('new-password');
     let submitBtn = document.getElementById('submit');
     let loadingGif = document.getElementById('loading-gif');
 
     document.forms[0].addEventListener('submit', (e) => {
 
-      let username = document.getElementById('username');
-      let password = document.getElementById('password');
+      let code = document.getElementById('code');
 
       let validation = true;
 
-      // username
-      if (username.value.trim().length < 3) {
-          username.classList.remove('is-valid');
-          username.classList.add('is-invalid');
-          addSmall(username, 'Enter a valid username.' ,'text-danger');
+      // code
+      if (code.value.trim().length < 6) {
+          code.classList.remove('is-valid');
+          code.classList.add('is-invalid');
+          addSmall(code, 'Please, type a valid code.' ,'text-danger');
           validation = false;
       } else {
-          username.classList.remove('is-invalid');
-          username.classList.add('is-valid');
-          addSmall(username, '' ,'text-success');
-      }
-
-      // password 
-      if (password.value.length < 6) {
-          password.classList.remove('is-valid');
-          password.classList.add('is-invalid');
-          addSmall(password, 'The password must be at least 6 characters.' ,'text-danger')
-          validation = false;
-      } else {
-          password.classList.remove('is-invalid');
-          password.classList.add('is-valid');
-          addSmall(password, '' ,'text-success');
+          code.classList.remove('is-invalid');
+          code.classList.add('is-valid');
+          addSmall(code, '' ,'text-success');
       }
 
       e.preventDefault();
@@ -139,42 +116,25 @@
               if (this.readyState == 4 && this.status == 200) {
                   let response = JSON.parse(this.response);
                   if (response.status) {
-                    window.location = '/';
+                    window.location = '/new-password';
                   } else {
-                      if (response.data) {
-                          response.data.forEach(resp => {
-                              if (resp.target === 'username') {
-                                  username.classList.add('is-invalid');
-                                  addSmall(username, resp.message, 'text-danger');
-                              }
-                              if (resp.target === 'password') {
-                                  password.classList.add('is-invalid');
-                                  addSmall(password, resp.message, 'text-danger');
-                              }
-                              if (resp.target === 'access') {
-                                swal({
-                                  title: 'Warning',
-                                  text: resp.message,
-                                  icon: 'warning',
-                                });
-                              }
-                          });
-                      } else {
-                          if (response.target === 'database') {
-                              swal({
-                                  title: 'Error',
-                                  text: response.message,
-                                  icon: 'error',
-                              });
-                          }
-                      }
+                        if (response.target === 'database') {
+                            swal({
+                                title: 'Error',
+                                text: response.message,
+                                icon: 'error',
+                            });
+                        } else {
+                            code.classList.add('is-invalid');
+                            addSmall(code, response.message, 'text-danger');
+                        }
                   }
                   
                   submitBtn.disabled = false;
                   loadingGif.style.opacity = '0';
               }
           };
-          http.send(`username=${username.value}&password=${password.value}`);
+          http.send(`code=${code.value}`);
       }
     });
 

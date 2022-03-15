@@ -5,7 +5,7 @@ const expressUpload = require('express-fileupload');
 const router = require('./controllers/controller');
 const app = express();
 const bodyParser = require('body-parser');
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8086;
 const session = require('express-session');
 
 // static files 

@@ -14,6 +14,11 @@ const columsNames = {
     transp: 'TRANSPORT'
 }
 
+const colsIndexNames = () => {
+    let alphabet = String.fromCharCode(...Array(123).keys()).slice(97).toUpperCase();
+    return alphabet;
+}
+
 // read without style
 const readWBxlsx = (filename) => {
     const xlsx = require('xlsx');
@@ -41,13 +46,20 @@ const combineStyle = (wb_xlsx, wb_xlsx_style) => {
         let ws = wb_xlsx.Sheets[wb_xlsx.SheetNames[i]];
         let ws_s = wb_xlsx_style.Sheets[wb_xlsx_style.SheetNames[i]];
         Object.keys(ws).forEach(key => {
-            if (typeof ws_s[key] !== 'undefined') {
+            if (ws_s[key]) {
                 let s = ws_s[key].s;
+                if (s && s.fill) {
+                    if ('theme' in s.fill.bgColor) {
+                        delete s.fill;
+                    }
+                }
                 ws_s[key] = ws[key];
                 ws_s[key].s = s;
             }
         });
+        
     }
+
     return wb_xlsx_style;
 }
 
@@ -116,9 +128,10 @@ const fetchData = (ws, group_col_data = []) => {
         let letter0 = array[0].substring(0, 1); // M-CODE
         let letter1 = array[1].substring(0, 1); // Numbering Agent
         const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
-        while (typeof ws[letter1+line] !== 'undefined' && typeof ws[letter1+line] !== 'undefined') {
+        while (ws[letter0+line] || ws[letter1+line]) {
             // objet pour construire un élément.
             let obj = {};
+            // console.log(typeof ws[letter1+line] !== 'undefined' && typeof ws[letter1+line] !== 'undefined');
             // creer un key shift sur l'objet.
             let shift = ws[letter0+(parseInt(array[0].substring(1, array[0].length)) - 1)];
             if (shift) obj[columsNames.shift] = shift.v;
@@ -159,15 +172,20 @@ const createOutput = (DATA_RH = [], wb, wb_style) => {
         let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
         let line = parseInt(first_A_col.substring(1, first_A_col.length));
         const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        let target100 = null, 
+            target200 = null;
         while (line <= rows.length) {
             if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
                 // numbering agent
-                let numberingagent = ws[important_cols[0]+line].w;
-                let mcode = ws[important_cols[1]+line].w;
+                let numberingagent = new String(ws[important_cols[0]+line].w).trim();
+                let mcode = new String(ws[important_cols[1]+line].w).trim();
                 let info = null;
+                
                 // PDFButler
                 if (new String(numberingagent).match('PDFB-')) {
                     info = DATA_RH.find(e => e[columsNames.number] === numberingagent);
+                } else if (mcode === 'GARDIEN') {
+                    info = DATA_RH.find(e => e[columsNames.mcode] === 'Gardien');
                 } else {
                     // get info via RH by M-CODE and Numbering Agent
                     info = DATA_RH.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
@@ -175,43 +193,67 @@ const createOutput = (DATA_RH = [], wb, wb_style) => {
                 if (info) {
                     // increment the numbers of agent
                     agent_found += 1;
+                    var col2000 = colsToFill.find(e => e.v.v === 2000);
+                    var col1000 = colsToFill.find(e => e.v.v === 1000);
+                    if (col1000) target100 = col1000.c.substring(0, 1)+line;
+                    if (col2000) target200 = col2000.c.substring(0, 1)+line;
                     switch (info[columsNames.shift]) {
                         case 'SHIFT 3' : case 'SHIFT WEEKEND':
                             // 1000
-                            let col1000 = colsToFill.find(e => e.v.v === 1000);
                             if (col1000) {
                                 if (columsNames.transpnight in info) {
-                                    ws[col1000.c.substring(0, 1)+line].v = parseFloat(info[columsNames.transpnight]) || 0;
-                                    ws[col1000.c.substring(0, 1)+line].w = info[columsNames.transpnight];
+                                    ws[target100].v = parseFloat(info[columsNames.transpnight]) || 0;
+                                    ws[target100].w = info[columsNames.transpnight];
                                 }
                             }
                             // 2000
-                            let col2000 = colsToFill.find(e => e.v.v === 2000);
                             if (col2000) {
                                 if (columsNames.transpday in info) {
-                                    ws[col2000.c.substring(0, 1)+line].v = parseFloat(info[columsNames.transpday]) || 0;
-                                    ws[col2000.c.substring(0, 1)+line].w = info[columsNames.transpday];
+                                    ws[target200].v = parseFloat(info[columsNames.transpday]) || 0;
+                                    ws[target200].w = info[columsNames.transpday];
                                 }
                             }
+                           
                             
                         break;
                         default: 
-                            
-                            if (ws[colsToFill[0].c.substring(0, 1)+line]) {
-                                ws[colsToFill[0].c.substring(0, 1)+line].v = parseFloat(info[columsNames.transp]) || 0;
-                                ws[colsToFill[0].c.substring(0, 1)+line].v = info[columsNames.transp];
+                            // for gardien
+                            if (info[columsNames.mcode] === 'Gardien') {
+                                ws['I'+line].v = parseFloat(info[columsNames.transp]) || 0;
+                                ws['I'+line].w = info[columsNames.transp];
                             }
+                            else if (ws[colsToFill[0].c.substring(0, 1)+line]) {
+                                ws[colsToFill[0].c.substring(0, 1)+line].v = parseFloat(info[columsNames.transp]) || 0;
+                                ws[colsToFill[0].c.substring(0, 1)+line].w = info[columsNames.transp];
+                            }
+                
                             break;
+                    } 
+
+                    if (col1000 && col2000) {
+                        // set formule
+                        let ciNames = colsIndexNames();
+                        let indexOf100 = ciNames.indexOf(col1000.c.substring(0, 1));
+                        let nextCol = ciNames[indexOf100 + 1];
+                        if (nextCol.length === 1) {
+                            if (target100 !== null  && target200 !== null) {
+                                if (info[columsNames.mcode] !== 'Gardien')
+                                    ws[nextCol+line].f = `${target200}*${col2000.c}+${target100}*${col1000.c}`;
+                            }
+                        } 
                     }
                     
                     // Nombre de repas
-                    colRep = colsToFill.find(e => new String(e.v.v).toUpperCase().match('REPAS'));
+                    colRep = info[columsNames.mcode] !== 'Gardien' ? 
+                        colsToFill.find(e => new String(e.v.v).toUpperCase().match('REPAS'))
+                        : {c: 'G43'};
+                    
                     if (colRep)
                         if (columsNames.repas in info) {
                             if (typeof ws[colRep.c.substring(0, 1)+line] === 'undefined')
                                 ws[colRep.c.substring(0, 1)+line] = {};
                             ws[colRep.c.substring(0, 1)+line].t = 'n';
-                            let number = (parseFloat(info[columsNames.repas]) || 0) * 3500;
+                            let number = info[columsNames.mcode] === 'Gardien' ? (parseFloat(info[columsNames.repas]) || 0) : (parseFloat(info[columsNames.repas]) || 0) * 3500;
                             ws[colRep.c.substring(0, 1)+line].v = number;
                             ws[colRep.c.substring(0, 1)+line].w = ws[colRep.c.substring(0, 1)+line].v;
                     }
@@ -234,14 +276,41 @@ const saveFile = (wb, filename) => {
     save.writeFile(wb, filename, {type: 'file'});
 }
 
-function randomCode() {
+function randomCode(length = 6) {
     var code = "";
     let v = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ!é&#";
-    for (let i = 0; i < 6; i++) { // 6 characters
+    for (let i = 0; i < length; i++) { // 6 characters
       let char = v.charAt(Math.random() * v.length - 1);
       code += char;
     }
     return code;
 }
-// export function
-module.exports = {readWBxlsx, readWBxlsxstyle, arrangeTRANSPORTS, getColumnName, groupCol, fetchData, createOutput, saveFile, getWS, getGroupedRequiredCol, randomCode};
+
+// RANDOM NUMBER CODE
+function randomnNumberCode(length = 6) {
+    var code = "";
+    let v = "0123456789";
+    for (let i = 0; i < length; i++) { // 6 characters
+      let char = v.charAt(Math.random() * v.length - 1);
+      code += char;
+    }
+    return code;
+}
+
+
+// export functions
+module.exports = {
+    readWBxlsx,
+    readWBxlsxstyle,
+    arrangeTRANSPORTS,
+    getColumnName,
+    groupCol,
+    fetchData,
+    createOutput,
+    saveFile,
+    getWS,
+    getGroupedRequiredCol,
+    randomCode,
+    randomnNumberCode,
+    colsIndexNames,
+};

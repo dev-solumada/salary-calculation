@@ -6,8 +6,22 @@ const script = require('./script.js')
 const mongoose = require('mongoose');
 const UserSchema = require('../models/UserSchema');
 const SCSchema = require('../models/SCSchema');
+const NotifSchema = require('../models/NotifSchema');
 const nodemailer = require('nodemailer');
 const moment = require('moment');
+const { google } = require("googleapis");
+const OAuth2 = google.auth.OAuth2;
+
+const oauth2Client = new OAuth2(
+    process.env.APP_CLIENT_ID, // ClientID
+    process.env.APP_CLIENT_SECRET, // Client Secret
+    "https://developers.google.com/oauthplayground" // Redirect URL
+);
+
+oauth2Client.setCredentials({
+    refresh_token: process.env.REFRESH_TOKEN
+});
+const accessToken = oauth2Client.getAccessToken();
 
 //Mailing
 const transporter = nodemailer.createTransport({
@@ -15,8 +29,16 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.MAIN_USER,
     pass: process.env.MAIN_PASS,
+    clientId: process.env.APP_CLIENT_ID,
+    clientSecret: process.env.APP_CLIENT_SECRET,
+    refreshToken: process.env.REFRESH_TOKEN,
+    accessToken: accessToken
   },
+  tls: {
+    rejectUnauthorized: false
+  }
 });
+
 
 const getAllUsers = async () => {
     let user = [];
@@ -48,6 +70,32 @@ const getSCInfo = async () => {
     return user[0];
 }
 
+// get notifications
+const getNotifs = async () => {
+    const Limit = 6;
+    let notifs = [];
+    await mongoose.connect(
+    process.env.MONGO_URI,
+    {
+        useUnifiedTopology: true,
+        UseNewUrlParser: true,
+    }
+    ).then(async () => {
+        allNotifs = await NotifSchema.find();
+        notifs = await NotifSchema.find().sort('-creation').limit(Limit);
+        notifs.forEach(async e => {e.moment = moment(e.creation).fromNow()});
+        if (allNotifs.length > Limit) {
+            // supprimer les autres notifications
+            await NotifSchema.deleteMany();
+            // insert many 
+            await NotifSchema.insertMany(notifs);
+        }
+
+    }).catch(err => { });
+
+    return notifs;
+}
+
 // redirect to login
 const redirectLogin = (req, res, next) => {
     if (req.session.userId) {
@@ -74,10 +122,133 @@ router.route('').get((req, res) => {
 });
 
 // LOGOUT
-router.route('/logout').all(redirectLogin, (req, res) => {
+router.route('/logout').get(redirectLogin, (req, res) => {
     req.session.destroy();
     return res.redirect('/login');
 });
+
+// FORGOT
+router.route('/forgot-password').get(redirectHome, (req, res) => {
+    req.session.foundUser = null;
+    return res.render('forgot', {login: true, year: new Date().getFullYear()});
+});
+
+// CODE
+router.route('/enter-code').all(redirectHome, (req, res) => {
+    const codeAuth = req.session.code;
+    if (req.method === 'GET') {
+        if (codeAuth) 
+            return res.render('enter-code', {login: true, year: new Date().getFullYear()});
+        else 
+            return res.redirect('/forgot-password');
+    } else {
+        const {code} = req.body;
+        if (code === codeAuth) {
+            res.send({status: true});
+        } else {
+            res.send({status: false, message: 'You have entered an invalid code.'})
+        }
+    }
+});
+
+// NEW PASSWORD & SET A NEW PASSWORD
+router.route('/new-password').all(redirectHome, (req, res) => {
+    const foundUser = req.session.foundUser;
+    if (req.method === 'GET') {
+        if (foundUser)
+            res.render('new-password', {login: true, year: new Date().getFullYear()});
+        else 
+            return res.redirect('/forgot-password');
+    } else {
+        mongoose.connect(
+            process.env.MONGO_URI,
+            {
+                useUnifiedTopology: true,
+                UseNewUrlParser: true,
+            }
+        ).then(async () => {
+            const {password, keep} = req.body;
+            foundUser.password = password;
+            await UserSchema.findOneAndUpdate({email: foundUser.email}, foundUser);
+            // if user checked the keep sign in
+            if (keep === 'true') {
+                req.session.userId = foundUser;
+            }
+            res.send({status: true});
+        }).catch(err => {
+            return res.send({
+                status: false,
+                target: 'database',
+                message: err
+            });
+        });
+    }
+});
+
+
+// CHECK USER NAME
+router.route('/find-username').post(redirectHome, (req, res) => {
+    const {username} = req.body;
+    
+    mongoose.connect(
+        process.env.MONGO_URI,
+        {
+            useUnifiedTopology: true,
+            UseNewUrlParser: true,
+        }
+    ).then(async () => {
+        const result = await UserSchema.findOne({$or: [{username: username}, {email: username}]});
+        // if result is not null
+        if (result) {
+            // generate random number code
+            let random_code = script.randomnNumberCode();
+            // set session number code
+            req.session.code = random_code;
+            // send email
+            var mailOptions = {
+                from: process.env.MAIN_USER,
+                to: result.email,
+                subject: "Validation code for Salary Calculation",
+                html:
+                    `<div style="padding: 8px; background-color: aliceblue;">
+                    <center>
+                    <h1>Salary Calculation Validation Code</h1>
+                    <table border="1" style="background:white; width: 400px; border-color: #eee; padding: 8px;border-collapse: collapse;">
+                        <tbody>
+                            <tr>
+                                <th style="text-align: left;  padding: 8px !important;">CODE:</th>
+                                <td style="padding: 8px !important;">${random_code}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br>
+                    </center>
+                </div>`,
+            };
+            await transporter.sendMail(mailOptions, function (error, info) {
+                error ? console.log(error) : console.log(info);
+                transporter.close();
+            });
+            req.session.foundUser = result;
+            res.send({status: true})
+        } else {
+            res.send({
+                status: false,
+                target: 'username',
+                message: 'This username or email is not found.'
+            });
+        }
+
+    }).catch(err => {
+        console.log(object);
+        return res.send({
+            status: false,
+            target: 'database',
+            message: err
+        });
+    });
+});
+
 
 // LOGIN 
 router.route('/login').all(redirectHome, (req, res) => {
@@ -159,6 +330,8 @@ router.route('/home').get(redirectLogin, async (req, res) => {
     let scInfo = await getSCInfo();
     let lastSCInfo = (scInfo) ? moment(scInfo.creation).fromNow() : 'none';
     let csInfoActivity = (scInfo) ? scInfo.number : 0;
+    // notifications
+    let notifs = await getNotifs();
     res.render('index', {
         login: false,
         active: 'home',
@@ -170,24 +343,30 @@ router.route('/home').get(redirectLogin, async (req, res) => {
         allUsers: allUsers,
         lastAddUser: lastAddUser,
         lastSCInfo: lastSCInfo,
-        csInfoActivity: csInfoActivity
+        csInfoActivity: csInfoActivity,
+        notifs: notifs
     });
 });
 
 /**
  * PROGRAMME - Salary Calculation.
  */
-router.route('/salary-calculation').get(redirectLogin, (req, res) => {
+router.route('/salary-calculation').get(redirectLogin, async (req, res) => {
     const user = req.session.userId;
-    res.render('salary-calculation', {login: false, active: 'programmes', active_sub: 'salary-calculation', year: new Date().getFullYear(), user: user});
+    // notifications
+    let notifs = await getNotifs();
+    res.render('salary-calculation', {login: false, active: 'programmes', active_sub: 'salary-calculation', year: new Date().getFullYear(), user: user, notifs: notifs});
 });
 
 /**
  * USERS - Add new user.
  */
-router.route('/add-new-user').get(redirectLogin, (req, res) => {
+router.route('/add-new-user').get(redirectLogin, async (req, res) => {
     const user = req.session.userId;
-    res.render('add-new-user', {login: false, active: 'users', active_sub: 'add-new-user', year: new Date().getFullYear(), user: user});
+    // notifications
+    let notifs = await NotifSchema.find();
+    notifs.forEach(async e => {e.moment = moment(e.creation).fromNow()});
+    res.render('add-new-user', {login: false, active: 'users', active_sub: 'add-new-user', year: new Date().getFullYear(), user: user, notifs: notifs});
 });
 
 /**
@@ -204,6 +383,14 @@ router.route('/set-user-access').post(redirectLogin, (req, res) => {
         // find all users
         let user = {access: req.body.access}
         await UserSchema.findOneAndUpdate({email: req.body.email}, user);
+        // set notif
+        let notif = {
+            category: 'user',
+            description: 'An user access has been ' + (req.body.access == 'true' ? 'given' : 'closed'),
+            creation: new Date()
+        }
+        await new NotifSchema(notif).save();
+
         await res.send({
             status: true,
             message: 'Access successfully set.'
@@ -230,6 +417,14 @@ router.route('/delete-user').post(redirectLogin, (req, res) => {
     ).then(async () => {
         // find all users
         await UserSchema.findOneAndDelete({email: req.body.email});
+        // set notif
+        let notif = {
+            category: 'user',
+            description: 'An user has been deleted.',
+            creation: new Date()
+        }
+        await new NotifSchema(notif).save();
+        // send response
         res.send({
             status: true,
             message: 'User successfully removed.'
@@ -257,7 +452,9 @@ router.route('/users-list').get(redirectLogin, async (req, res) => {
     ).then(async () => {
         // find all users
         let users = await UserSchema.find();
-        return res.render('users-list', {login: false, active: 'users', active_sub: 'users-list', year: new Date().getFullYear(), users: users, user: user});
+        // notifications
+        let notifs = await getNotifs();
+        return res.render('users-list', {login: false, active: 'users', active_sub: 'users-list', year: new Date().getFullYear(), users: users, user: user, notifs: notifs});
     }).catch(err => {
         res.send({
             target: 'database',
@@ -282,7 +479,9 @@ router.route('/users-list').get(redirectLogin, async (req, res) => {
     ).then(async () => {
         // find all users
         let users = await UserSchema.find();
-        res.render('manage-access', {login: false, active: 'users', active_sub: 'manage-access', year: new Date().getFullYear(), users: users, user: user});
+        // notifications
+        let notifs = await getNotifs();
+        res.render('manage-access', {login: false, active: 'users', active_sub: 'manage-access', year: new Date().getFullYear(), users: users, user: user, notifs: notifs});
     }).catch(err => {
         res.send({
             target: 'database',
@@ -347,6 +546,15 @@ router.route('/users-list').get(redirectLogin, async (req, res) => {
                     let token = await UserSchema.findOne({email: user.email});
                     req.session.userId = token;
                 }
+                
+                // set notif
+                let notif = {
+                    category: 'user',
+                    description: 'An user has been updated.',
+                    creation: new Date()
+                }
+                await new NotifSchema(notif).save();
+                
                 await res.send({
                     status: true,
                     message: 'User successfully updated!'
@@ -356,7 +564,10 @@ router.route('/users-list').get(redirectLogin, async (req, res) => {
             // find all users
             let userEdit = await UserSchema.findOne({email: req.params.email});
             if (userEdit) {
-                return res.render('edit-user', {login: false, active: 'users', active_sub: 'users-list', year: new Date().getFullYear(), userEdit: userEdit, user: userEdit});
+                // notifications
+                let notifs = await NotifSchema.find();
+                notifs.map(async e => e.creation = moment(e.creation).fromNow());
+                return res.render('edit-user', {login: false, active: 'users', active_sub: 'users-list', year: new Date().getFullYear(), userEdit: userEdit, user: userEdit, notifs: notifs});
             } else {
                 res.redirect('/users-list');
             }
@@ -445,12 +656,20 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
                     </div>`,
                 };
                 await transporter.sendMail(mailOptions, function (error, info) {
-                    if (error) {
-                        console.log(error);
-                    }
+                    error ? console.log(error) : console.log(info);
+                    transporter.close();
                 });
+                
             }
-            
+                
+            // set notif
+            let notif = {
+                category: 'user',
+                description: 'An user has been added.',
+                creation: new Date()
+            }
+            await new NotifSchema(notif).save();
+        
             // save user
             await UserSchema(user).save();
             await res.send({
@@ -581,6 +800,15 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
                             }
                             await new SCSchema(newinfo).save();
                         }
+                        
+                        // set notif
+                        let notif = {
+                            category: 'salary cactulation',
+                            description: 'Salary calculation: Recent activity',
+                            creation: new Date()
+                        }
+                        await new NotifSchema(notif).save();
+                        
                         
                     }).catch(err => {
                         res.send({

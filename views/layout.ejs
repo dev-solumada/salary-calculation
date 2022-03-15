@@ -49,22 +49,24 @@
               <i class="ti-bell mx-0"></i>
               <span class="count"></span>
             </a>
-            <!-- <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="notificationDropdown">
+            <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="notificationDropdown">
               <p class="mb-0 font-weight-normal float-left dropdown-header">Notifications</p>
+              <% notifs.forEach (notif => { %>
               <a class="dropdown-item">
                 <div class="item-thumbnail">
                   <div class="item-icon bg-info">
-                    <i class="ti-user mx-0"></i>
+                    <i class="<%= notif.category === 'user' ? 'ti-user' : 'ti-book' %> mx-0"></i>
                   </div>
                 </div>
                 <div class="item-content">
-                  <h6 class="font-weight-normal">New user registration</h6>
+                  <h6 class="font-weight-normal"><%= notif.description %></h6>
                   <p class="font-weight-light small-text mb-0 text-muted">
-                    2 days ago
+                    <%= notif.moment %>
                   </p>
                 </div>
               </a>
-            </div> -->
+              <% }) %> 
+            </div>
           </li>
           <li class="nav-item nav-profile dropdown">
             <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown" id="profileDropdown">
