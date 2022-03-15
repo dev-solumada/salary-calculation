@@ -828,7 +828,7 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
                         }
                     });
                 })
-            }, 5000 * 6);
+            }, 60 * 60 * 24 * 1000);
         }
     } catch (err) {
         console.log(err)
