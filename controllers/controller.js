@@ -737,7 +737,7 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
             await salary_sheet.mv(sheet_filename);
             // create the output file name
             let date = new Date();
-            let opFileName = await `${salary_sheet.name.split('.xls')[0]}_${String(date.getDay()).padStart(2, '0')}${String(date.getMonth()).padStart(2, '0')}${date.getFullYear()}.xlsx`;
+            let opFileName = await `${salary_sheet.name.split('.xls')[0]}_${String(date.getDay()).padStart(2, '0')}${String(date.getMonth()).padStart(2, '0')}${date.getFullYear()}_${date.getTime()}.xlsx`;
             // work books
             var wb_rh = await script.readWBxlsx(rh_filename);
             var wb_sheet = await script.readWBxlsx(sheet_filename);
