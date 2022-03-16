@@ -41,22 +41,38 @@ const findData = (ws, key) => {
 }
 
 const combineStyle = (wb_xlsx, wb_xlsx_style) => {
+    const XLSX = require('xlsx')
     let sheets_leng = wb_xlsx.SheetNames.length;
     for (let i = 0; i < sheets_leng; i++) {
         let ws = wb_xlsx.Sheets[wb_xlsx.SheetNames[i]];
         let ws_s = wb_xlsx_style.Sheets[wb_xlsx_style.SheetNames[i]];
+        var range = XLSX.utils.decode_range(ws['!ref']);
         Object.keys(ws).forEach(key => {
             if (ws_s[key]) {
                 let s = ws_s[key].s;
-                if (s && s.fill) {
-                    if ('theme' in s.fill.bgColor) {
-                        delete s.fill;
-                    }
-                }
                 ws_s[key] = ws[key];
                 ws_s[key].s = s;
             }
         });
+
+        /* ELIMINER LES BACKGROUND NOIR */
+        for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
+            // loo all cells in the current column
+            for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+                let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+                // cell styled
+                const cellStyled = ws_s[cellName];
+                if (cellStyled && cellStyled.s) {
+                    if (cellStyled.s.fill && cellStyled.s.fill.bgColor)
+                        if (cellStyled.s.fill.bgColor.rgb === '000000') { // if bg is dark
+                            cellStyled.s.fill.bgColor = {}; // set bg to white
+                            delete cellStyled.s.fill;
+                            ws_s[cellName].s = cellStyled.s;
+                    }
+                }
+            }
+            // NOTE: secondCell is undefined if it does not exist (i.e. if its empty)
+        }
         
     }
 
