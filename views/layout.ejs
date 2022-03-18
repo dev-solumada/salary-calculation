@@ -106,12 +106,13 @@
               <span class="menu-title">Programmes</span>
               <i class="menu-arrow"></i>
             </a>
-            <div class="collapse" id="ui-basic">
+            <div class="collapse <%= active === 'programmes' ? 'show' : '' %>" id="ui-basic">
               <ul class="nav flex-column sub-menu">
-                <li class="nav-item <%= active_sub === 'salary-calculation' ? 'active' : '' %>"> <a class="nav-link" href="/salary-calculation">Salary Calculation</a></li>
+                <li class="nav-item"><a class="nav-link <%= active_sub === 'salary-calculation' ? 'active' : '' %>" href="/salary-calculation">Salary Calculation</a></li>
               </ul>
             </div>
           </li>
+          <% if (user.usertype === 'admin') { %> 
           <li class="nav-item <%= active === 'users' ? 'active' : '' %>">
             <a class="nav-link" data-bs-toggle="collapse" href="#auth" aria-expanded="false" aria-controls="auth">
               <i class="ti-user menu-icon"></i>
@@ -126,6 +127,7 @@
               </ul>
             </div>
           </li>
+          <% } %> 
         </ul>
       </nav>
       <!-- partial -->
