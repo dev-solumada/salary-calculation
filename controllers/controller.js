@@ -107,6 +107,15 @@ const redirectLogin = (req, res, next) => {
     }
 }
 
+const checkType = (req, res, next) => {
+    if (req.session.userId.usertype !== 'admin') {
+        backURL=req.header('Referer') || '/';
+        res.redirect(backURL);
+    } else {
+        next();
+    }
+}
+
 // redirect to home
 const redirectHome = (req, res, next) => {
     if (!req.session.userId) {
@@ -449,7 +458,7 @@ router.route('/delete-user').post(redirectLogin, (req, res) => {
 /**
  * USERS - Users list.
  */
-router.route('/users-list').get(redirectLogin, async (req, res) => {
+router.route('/users-list').get(redirectLogin, checkType, async (req, res) => {
     const user = req.session.userId;
     mongoose.connect(
         process.env.MONGO_URI,
@@ -476,7 +485,7 @@ router.route('/users-list').get(redirectLogin, async (req, res) => {
 /**
  * USERS - Manage access.
  */
- router.route('/manage-access').get(redirectLogin, async (req, res) => {
+ router.route('/manage-access').get(redirectLogin, checkType, async (req, res) => {
     const user = req.session.userId;
     mongoose.connect(
         process.env.MONGO_URI,
@@ -502,7 +511,7 @@ router.route('/users-list').get(redirectLogin, async (req, res) => {
 /**
  * USERS - Edit user.
  */
- router.route('/edit-user/:email').all(redirectLogin, async (req, res) => {
+ router.route('/edit-user/:email').all(redirectLogin, checkType, async (req, res) => {
     const userS = req.session.userId;
     mongoose.connect(
         process.env.MONGO_URI,
@@ -575,7 +584,7 @@ router.route('/users-list').get(redirectLogin, async (req, res) => {
                 // notifications
                 let notifs = await NotifSchema.find();
                 notifs.map(async e => e.creation = moment(e.creation).fromNow());
-                return res.render('edit-user', {login: false, active: 'users', active_sub: 'users-list', year: new Date().getFullYear(), userEdit: userEdit, user: userEdit, notifs: notifs});
+                return res.render('edit-user', {login: false, active: 'users', active_sub: 'users-list', year: new Date().getFullYear(), userEdit: userEdit, user: userS, notifs: notifs});
             } else {
                 res.redirect('/users-list');
             }
@@ -593,7 +602,7 @@ router.route('/users-list').get(redirectLogin, async (req, res) => {
 /**
  * Add user
  */
-router.route('/add-user').post(redirectLogin, (req, res) => {
+router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
     mongoose.connect(
         process.env.MONGO_URI,
         {
@@ -601,12 +610,7 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
             UseNewUrlParser: true,
         }
     ).then(async () => {
-        let user = await {
-            username: req.body.username,
-            email: req.body.email,
-            access: req.body.access,
-            password: req.body.password,
-        }
+        let user = await req.body;
 
         let random_code = req.body.random_code;
         // check username
@@ -707,7 +711,7 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
             res.send({
                 status: false,
                 icon: 'warning',
-                message: 'No file uploaded!'
+                message: 'No files uploaded!'
             }); return;
         } else {
             // use the name of the input field (i.e. "avatar") 
@@ -844,7 +848,7 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
                     
                     // set notif
                     let notif = {
-                        category: 'salary cactulation',
+                        category: 'salary calculation',
                         description: 'Salary calculation: Recent activity',
                         creation: new Date()
                     }
@@ -887,6 +891,21 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
                     files.forEach(file => {
                         if (file.includes(opFileName)) {
                             fs.unlinkSync(dir + '/' + file);
+                            mongoose.connect(
+                                process.env.MONGO_URI,
+                                {
+                                    useUnifiedTopology: true,
+                                    UseNewUrlParser: true,
+                                }
+                            ).then(async () => {
+                                // set notif
+                                let notif = {
+                                    category: 'salary calculation',
+                                    description: 'An output file was deleted.',
+                                    creation: new Date()
+                                }
+                                await new NotifSchema(notif).save();
+                            });
                         }
                     });
                 })
@@ -898,5 +917,9 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
     }
 });
 
+router.route('/fetch-sheets').post(async function(res, req) {
+    const {id} = req.body;
+    
+})
 
 module.exports = router;

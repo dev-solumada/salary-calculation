@@ -29,6 +29,13 @@
                     <label for="exampleInputEmail3">Email address</label>
                     <input type="email" class="form-control" id="email" value="<%= userEdit.email %>" name="email" placeholder="Email">
                 </div>
+                <div class="form-group">
+                    <label for="exampleInputEmail3">User type</label>
+                    <select class="form-control form-control py-3" id="usertype" name="usertype">
+                        <option value="guest" <%= (userEdit === 'guest' ? 'selected' : '') %> >Guest</option>
+                        <option value="admin" <%= (userEdit === 'admin' ? 'selected' : '') %> >Administrator</option>
+                    </select>
+                </div>
                 <button type="submit" id="submit-btn" class="btn btn-primary text-white me-2">Update</button>
                 <img src="/images/loading-gif-15.gif" alt="loading..." draggable="false" id="loading-gif" style="width: 110px;opacity: 0;">
             </form>
