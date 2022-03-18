@@ -57,7 +57,7 @@
                                         <a href="/edit-user/<%= usr.email %>" class="btn btn-outline-primary btn-icon-text">
                                             <i class="ti-pencil btn-icon-prepend"></i> Edit
                                         </a>
-                                        <% if (!usr.access) { %> 
+                                        <% if (!usr.access && usr.usertype !== 'main admin') { %> 
                                         <button onclick="deleteUser(this, '<%= usr.email %>')" class="btn btn-outline-danger btn-icon-text">
                                             <i class="ti-trash btn-icon-prepend"></i> Delete
                                         </button>

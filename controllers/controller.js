@@ -305,6 +305,14 @@ router.route('/login').all(redirectHome, (req, res) => {
                     status: true,
                     message: 'Login with success!'
                 });
+
+                // set notif
+                let notif = {
+                    category: 'user',
+                    description: 'A user was logging in',
+                    creation: new Date()
+                }
+                await new NotifSchema(notif).save();
             }
         }).catch(err => {
             console.log(err);
@@ -705,14 +713,15 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
             // use the name of the input field (i.e. "avatar") 
             // to retrieve the uploaded file
             let rh = req.files['rh_file'];
+            let salary_up = req.files['salaryup_file'];
             let salary_sheet = req.files['sheet_file'];
 
             // No RH file selected
-            if (!rh) {
+            if (!rh && !salary_up) {
                 res.send({
                     status: false,
                     icon: 'warning',
-                    message: 'No RH file uploaded!'
+                    message: 'No file that contains data uploaded!'
                 }); return;
             } 
             // NO Sheet file selected
@@ -726,109 +735,162 @@ router.route('/add-user').post(redirectLogin, (req, res) => {
 
             let dir = 'uploads'
             // files name
-            let rh_filename = dir+'/'+rh.name;
+            let rh_filename =  rh ? dir+'/'+rh.name : null;
+            let salary_filename =  salary_up ? dir+'/'+salary_up.name : null;
             let sheet_filename = dir+'/'+salary_sheet.name;
             // verifier le repertoire
             if (!fs.existsSync(dir)) {
                 await fs.mkdirSync(dir);
             }
-            // copier les 2 fichiers
-            await rh.mv(rh_filename);
+            // copier les 3 fichiers
+            if (rh) await rh.mv(rh_filename);
+            if (salary_up) await salary_up.mv(salary_filename);
             await salary_sheet.mv(sheet_filename);
             // create the output file name
             let date = new Date();
-            let opFileName = await `${salary_sheet.name.split('.xls')[0]}_${String(date.getDay()).padStart(2, '0')}${String(date.getMonth()).padStart(2, '0')}${date.getFullYear()}_${date.getTime()}.xlsx`;
+            let opFileName = await `${date.toLocaleDateString().replace(/\//g, '.')} ${salary_sheet.name.split('.xls')[0]} ${date.getTime()}.xlsx`;
             // work books
-            var wb_rh = await script.readWBxlsx(rh_filename);
+            var wb_rh = (rh_filename) ? await script.readWBxlsx(rh_filename) : null;
+            var wb_salaryup = (salary_filename) ? await script.readWBxlsx(salary_filename) : null;
             var wb_sheet = await script.readWBxlsx(sheet_filename);
             var wb_sheet_style = await script.readWBxlsxstyle(sheet_filename);
-            //.get work sheet rh
-            var ws = await script.getWS(wb_rh, 7);
-            // check sheets
-            if (!ws) {
-                res.send({
-                    status: false,
-                    icon: 'error',
-                    message: 'No specified Sheetname found!'
-                }); return;
-            }
-            // fetch all data required
-            var data = await script.fetchData(ws);
-            // if data is empty
-            if (data.length <= 0) {
-                res.send({
-                    status: false,
-                    icon: 'error',
-                    message: 'No data found in the RH file! Please verify it.'
-                });
-            } else {
-                // output file
-                let output = await script.createOutput(data, wb_sheet, wb_sheet_style);
-                if (output.agent_found === 0) {
+            var step = 0;
+            if (wb_rh) {
+                //.get work sheet rh
+                var ws = await script.getWS(wb_rh, 7);
+                // check sheets
+                if (!ws) {
                     res.send({
                         status: false,
                         icon: 'error',
-                        message: 'No Agent and Required Columns found in the GLOBAL SALARY SHEET! Please verify the file.'
+                        message: 'No specified Sheetname found!'
+                    }); return;
+                }
+                // fetch all data required
+                var data = await script.fetchData(ws);
+                // if data is empty
+                if (data.length <= 0) {
+                    res.send({
+                        status: false,
+                        icon: 'error',
+                        message: 'No data found in the RH file! Please verify it.'
                     });
                 } else {
-                    // save file
-                    await script.saveFile(output.wb, dir +'/'+ opFileName);
-                    //send response
-                    await res.send({
-                        status: true,
-                        icon: 'success',
-                        message: 'The file is proccessed successfully.',
-                        file: opFileName
-                    });
-                    // save info to database
-                    mongoose.connect(
-                        process.env.MONGO_URI,
-                        {
-                            useUnifiedTopology: true,
-                            UseNewUrlParser: true,
-                        }
-                    ).then(async () => {
-                        let info = await SCSchema.find();
-                        if (info[0]) {
-                            info[0].number += 1;
-                            info[0].creation = new Date();
-                            await SCSchema.findOneAndUpdate({name: 'info'}, info[0])
-                        } else {
-                            let newinfo = {
-                                name: 'info',
-                                number: 1
-                            }
-                            await new SCSchema(newinfo).save();
-                        }
-                        
-                        // set notif
-                        let notif = {
-                            category: 'salary cactulation',
-                            description: 'Salary calculation: Recent activity',
-                            creation: new Date()
-                        }
-                        await new NotifSchema(notif).save();
-                        
-                        
-                    }).catch(err => {
+                    // output file
+                    let output = await script.createOutput(data, wb_sheet, wb_sheet_style);
+                    if (output.agent_found === 0) {
                         res.send({
-                            target: 'database',
                             status: false,
-                            message: 'Unable to connect the database.'
+                            icon: 'error',
+                            message: 'No Agent and Required Columns found in the GLOBAL SALARY SHEET! Please verify the file.'
                         });
-                    })
+                    } else {
+                        // save file
+                        await script.saveFile(output.wb, dir +'/'+ opFileName);
+                        step = await step + 1;
+                    }
                 }
             }
-            // delete used file after 30 seconds
+            if (wb_salaryup) {
+                let wb = await script.readWBxlsx(salary_filename);
+
+                let ws = await script.getWS(wb, 1);
+                let data = await script.getSalaryData(ws);
+                if (data.length < 0) {
+                    res.send({
+                        status: false,
+                        icon: 'error',
+                        message: 'No data found in the salary file! Please verify the file.'
+                    });
+                    return;
+                } else {
+                    // if step one is done change the to the output file.
+                    if (step !== 0)
+                        wb_sheet = await script.readWBxlsx(dir +'/'+ opFileName);
+                    let output = await script.createOutputSalaryUp(data, wb_sheet, wb_sheet_style);
+                    
+                    await script.saveFile(output.wb, dir +'/'+ opFileName);
+                    step = await step + 1;
+                }
+            }
+            if (step > 0) {
+                //send response
+                await res.send({
+                    status: true,
+                    icon: 'success',
+                    message: 'The file is proccessed successfully.',
+                    file: opFileName
+                });
+                // save info to database
+                mongoose.connect(
+                    process.env.MONGO_URI,
+                    {
+                        useUnifiedTopology: true,
+                        UseNewUrlParser: true,
+                    }
+                ).then(async () => {
+                    let info = await SCSchema.find();
+                    if (info[0]) {
+                        info[0].number += 1;
+                        info[0].creation = new Date();
+                        await SCSchema.findOneAndUpdate({name: 'info'}, info[0])
+                    } else {
+                        let newinfo = {
+                            name: 'info',
+                            number: 1
+                        }
+                        await new SCSchema(newinfo).save();
+                    }
+                    
+                    // set notif
+                    let notif = {
+                        category: 'salary cactulation',
+                        description: 'Salary calculation: Recent activity',
+                        creation: new Date()
+                    }
+                    await new NotifSchema(notif).save();
+                    
+                    
+                }).catch(err => {
+                    res.send({
+                        target: 'database',
+                        status: false,
+                        message: 'Unable to connect the database.'
+                    });
+                });
+            } else {
+                //send response
+                await res.send({
+                    status: false,
+                    icon: 'warning',
+                    message: 'Can not perform the program.',
+                    file: opFileName
+                });
+            }
+            // delete used file after 10 seconds les fichier qu'on viend de telecharger
             await setTimeout(() => {
                 fs.readdir(dir, (err, files) => {
                     files.forEach(file => {
-                        if (file.includes(rh.name) || file.includes(salary_sheet.name) || file.includes(opFileName)) {
+                        if (rh && file.includes(rh.name)) 
+                            fs.unlinkSync(dir + '/' + file);
+                        if (salary_up && file.includes(salary_up.name)) 
+                            fs.unlinkSync(dir + '/' + file);
+                        if (file.includes(salary_sheet.name)) {
                             fs.unlinkSync(dir + '/' + file);
                         }
                     });
                 })
-            }, 60 * 60 * 24 * 1000);
+            }, 10000);
+            // delete output file after 1 jours
+            await setTimeout(() => {
+                fs.readdir(dir, (err, files) => {
+                    files.forEach(file => {
+                        if (file.includes(opFileName)) {
+                            fs.unlinkSync(dir + '/' + file);
+                        }
+                    });
+                })
+            }, 60*60*24*1000);
         }
     } catch (err) {
         console.log(err)

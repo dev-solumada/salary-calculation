@@ -8,6 +8,10 @@ const User = mongoose.Schema({
     creation: {
         type: Date,
         default: new Date()
+    },
+    usertype: {
+        type: String,
+        default: 'guest'
     }
 })
 

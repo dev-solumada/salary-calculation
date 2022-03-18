@@ -313,6 +313,90 @@ function randomnNumberCode(length = 6) {
     return code;
 }
 
+/**
+ * SALARY EXTRACTION
+ */
+
+ const createOutputSalaryUp = (DATA_RH = [], wb, wb_style) => {
+    var agent_found = 0;
+    const xlsx = require('xlsx');
+    // creer un nouveau work book
+    var newWorkbook = wb;
+    // parcourir tous les feuilles SHEETS
+    for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
+        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
+        // chercher ou se situe le 2000 et 1000
+        let colSalaryUp = ''
+        if (i == 0) colSalaryUp = 'G';
+        if (i == 1) colSalaryUp = 'I';
+        if (i == 2) colSalaryUp = 'E';
+        if (i == 3) colSalaryUp = 'F';
+        if (i == 4) colSalaryUp = 'E';
+        
+        if (i == 6) colSalaryUp = 'D';
+        if (i == 8) colSalaryUp = 'D';
+        
+        // total transport
+        let important_cols = ['A', 'B'];
+        let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
+        let line = parseInt(first_A_col.substring(1, first_A_col.length));
+        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        while (line <= rows.length) {
+            if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
+                // numbering agent
+                let numberingagent = new String(ws[important_cols[0]+line].w).trim();
+                let mcode = new String(ws[important_cols[1]+line].w).trim();
+                // get info via RH by M-CODE and Numbering Agent
+                let info = DATA_RH.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
+                if (info) {
+                    // salary 
+                    if (columsNames.salary in info) {
+                        // cols to fill
+                        if (colSalaryUp != '') {
+                            let colIndex = colSalaryUp+line;
+                            if (!ws[colIndex]) {
+                                ws[colIndex] = {t: 'n'}
+                            }
+                            ws[colIndex].v = info[columsNames.salary];
+                            ws[colIndex].w = new String(info[columsNames.salary]);
+                        }
+                    }
+                }
+            }
+            line ++;
+        }
+    }
+
+    return {
+        agent_found : agent_found,
+        wb: combineStyle(newWorkbook, wb_style)
+    };
+    
+}
+const getSalaryData = (ws) => {
+    const XLSX = require('xlsx');
+    var data = [];
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    for (let rowNum = 3; rowNum <= range.e.r; rowNum++) {
+        // loo all cells in the current column
+        let obj = {};
+        for (let colNum = range.s.c; colNum <= 3; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            // cell styled
+            const cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('B')) obj[columsNames.mcode] = cell.w;
+                if (cellName.includes('A')) obj[columsNames.number] = cell.w;
+                if (cellName.includes('C')) obj[columsNames.salary] = parseFloat(cell.w) || 0;
+            }
+        // NOTE: secondCell is undefined if it does not exist (i.e. if its empty)
+        }
+        // if keys exist
+        if (columsNames.mcode in obj && columsNames.salary in obj) 
+            data.push(obj);
+    }
+    return data;
+}
 
 // export functions
 module.exports = {
@@ -323,10 +407,12 @@ module.exports = {
     groupCol,
     fetchData,
     createOutput,
+    createOutputSalaryUp,
     saveFile,
     getWS,
     getGroupedRequiredCol,
     randomCode,
     randomnNumberCode,
     colsIndexNames,
+    getSalaryData,
 };

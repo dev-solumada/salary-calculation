@@ -18,15 +18,38 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="card-body">
+                        <h4 class="card-title text-dark">The files that contains all the data to be extracted.</h4>
+                    </div>
+                    <!-- RH FILE -->
+                    <div class="card-body">
                         <h4 class="card-title">RAPPORT RH</h4>
-                        <p class="card-description">Field to upload <code>Rapport RH</code> file. The file that contains all the data to be extracted.</p>
+                        <p class="card-description">Field to upload <code>Rapport RH</code> file. </p>
                         <div class="template-demo">
                             <div class="form-group">
-                                <label>File upload</label>
                                 <input type="file" name="rapport-rh" id="rapport-rh" class="file-upload-default" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
                                 <div class="input-group col-xs-12">
                                     <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
-                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'rapport-rh')">Upload file</button>
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'rapport-rh')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- SALARY UP -->
+                    <div class="card-body">
+                        <h4 class="card-title">SALARY UP</h4>
+                        <p class="card-description">Field to upload <code>SALARY UP</code> file.</p>
+                        <div class="template-demo">
+                            <div class="form-group">
+                                <input type="file" name="salary-up" id="salary-up" class="file-upload-default" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'salary-up')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -34,15 +57,20 @@
                 </div>
                 <div class="col-md-6">
                     <div class="card-body">
+                        <h4 class="card-title text-dark">The file to be filled in with the data extracted.</h4>
+                    </div>
+                    <div class="card-body">
                         <h4 class="card-title">GLOBAL SALARY SHEET</h4>
-                        <p class="card-description">Field to upload <code>GLOBAL SALARY SHEET</code> file. The file to be filled in with the data extracted.</p>
+                        <p class="card-description">Field to upload <code>GLOBAL SALARY SHEET</code> file.</p>
                         <div class="template-demo">
                             <div class="form-group">
-                                <label>File upload</label>
                                 <input type="file" name="salary-sheet" id="salary-sheet" class="file-upload-default" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
                                 <div class="input-group col-xs-12">
                                     <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
-                                    <button class="file-upload-browse btn btn-primary text-white" type="button" role="button" onclick="uploadClick(this, 'salary-sheet')">Upload file</button>
+                                    <button class="file-upload-browse btn btn-warning text-white" type="button" role="button" onclick="uploadClick(this, 'salary-sheet')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -52,17 +80,18 @@
             <div class="row">
                 <div class="col-md-12">
                     <div class="card-body">
+                        <hr>
                         <h4 class="card-title"></h4>
                         <div class="template-demo text-center">
                             <p class="text-muted">Click on the button below to start <code>Data extraction</code> and <code>Download</code> the Excel file.</p>
-                            <p class="text-muted">But before that, make sure that you have uploaded the two files.</p>
+                            <p class="text-muted">But before that, make sure that you have uploaded at least a file for each columns.</p>
                             <button type="submit" role="button" class="btn btn-success text-white btn-icon-text" id="download">
                                 <i class="ti-download btn-icon-prepend"></i>                                                    
                                 Start Data extraction and Download file
                             </button>
                             <div class="text-center">
                                 <p class="mt-2 text-dark" style="display: none;" id="downloading-p">Downloading...</p>
-                                <img src="/images/loading-gif-15.gif" alt="loading..." draggable="false" id="loading-gif" style="width: 110px;display: none;">
+                                <img src="/images/loading-gif-15.gif" alt="loading..." draggable="false" id="loading-gif" style="width: 110px;opacity: 0;">
                             </div>
                         </div>
                     </div>
@@ -77,34 +106,58 @@
         let downloadingP = document.getElementById('downloading-p');
         var fileSelected1 = null;
         var fileSelected2 = null;
+        var fileSelected3 = null;
 
         function uploadClick(btn, id) {
             let inputfile = document.getElementById(id);
+                inputfile.addEventListener('change', () => {})
             if (inputfile) {
                 inputfile.click();
                 inputfile.addEventListener('change', () => {
+                    if (btn.previousElementSibling && btn.previousElementSibling.className === 'btn btn btn-inverse-danger btn-fw reset') {
+                        btn.previousElementSibling.remove();
+                    }
                     if (inputfile.files.length > 0) {
                         if (id === 'salary-sheet') fileSelected2 = inputfile.files;
+                        if (id === 'salary-up') fileSelected3 = inputfile.files;
                         if (id === 'rapport-rh') fileSelected1 = inputfile.files;
+                        let btnR = document.createElement('button');
+                        btnR.className = 'btn btn btn-inverse-danger btn-fw reset';
+                        let i = document.createElement('i');
+                        i.className = 'ti-share-alt btn-icon-prepend';
+                        btnR.append(i);
+                        btnR.append(document.createTextNode(' Reset'));
+                        // btnR.setAttribute('onclick')
+                        btnR.addEventListener('click', function(e) {
+                            btnR.remove();
+                            document.getElementById(id).value = null;
+                            document.getElementById(id).files = null;
+                            btn.parentElement.firstElementChild.value = '';
+                        });
+                        btn.before(btnR);
+
+                        
                     } else {
-                        if (id === 'salary-sheet') inputfile.files = fileSelected2;
+                        if (id === 'salary-sheet') inputfile.files = fileSelected3;
+                        if (id === 'salary-up') inputfile.files = fileSelected2;
                         if (id === 'rapport-rh') inputfile.files = fileSelected1;
                     }
-                    btn.previousElementSibling.value = inputfile.files[0].name;
-                    // disable button
-                    // downloadBtn.disabled = !(document.getElementById('salary-sheet').files.length === 1 && document.getElementById('rapport-rh').files.length === 1)
-                })
+                    btn.parentElement.firstElementChild.value = inputfile.files[0].name;
+                });
             }
         }
 
         document.forms[0].addEventListener('submit', (e) => {
             e.preventDefault();
             let file1 = document.getElementById('rapport-rh');
-            let file2 = document.getElementById('salary-sheet');
+            let file2 = document.getElementById('salary-up');
+            let file3 = document.getElementById('salary-sheet');
 
             let formData = new FormData();
             formData.append('rh_file', file1.files[0]);
-            formData.append('sheet_file', file2.files[0]);
+            formData.append('salaryup_file', file2.files[0]);
+            formData.append('sheet_file', file3.files[0]);
+            // append salary up file
 
             // post form data
             const xhr = new XMLHttpRequest();
@@ -120,7 +173,7 @@
                     document.body.appendChild(link);                                                        //needed for firefox
                     link.click();
                     // hide loading gif and remove link.
-                    downloadingP.style.display = 'inline-block';
+                    downloadingP.style.display = 'block';
                     setInterval(() => {
                         downloadingP.style.display = 'none';
                         link.remove();
@@ -134,14 +187,14 @@
                     })
                 }
                 downloadBtn.disabled = false;
-                loadingGif.style.display = 'none';
+                loadingGif.style.opacity = '0';
             };
 
             // create and send the reqeust
             xhr.open('POST', '/upload-xlsx');
             xhr.send(formData);
             downloadBtn.disabled = true;
-            loadingGif.style.display = 'inline-block';
+            loadingGif.style.opacity = '1';
         })
     </script>
 </div>

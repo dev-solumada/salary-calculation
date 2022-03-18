@@ -49,7 +49,7 @@
                                         </div>
                                     </td>
                                     <td class="text-center">
-                                        <% if (user.email !== usr.email) { %> 
+                                        <% if (user.email !== usr.email && usr.usertype === 'guest') { %> 
                                             <% if (!usr.access) { %> 
                                             <button onclick="giveAccess(this, '<%= usr.email %>')" class="btn btn-outline-success btn-icon-text">
                                                 <i class="ti-unlock btn-icon-prepend"></i> Give Access
@@ -59,6 +59,10 @@
                                                 <i class="ti-lock btn-icon-prepend"></i> Close Access
                                             </button>
                                             <% } %> 
+                                        <% } else { %> 
+                                        <button class="btn btn-outline-secondary btn-icon-text" disabled>
+                                            <i class="ti-lock btn-icon-prepend"></i> None
+                                        </button>
                                         <% } %> 
                                     </td>
                                 </tr>
