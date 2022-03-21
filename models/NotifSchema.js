@@ -17,6 +17,10 @@ const NotifSchema = mongoose.Schema({
         type: Date,
         default: new Date()
     },
+    link: {
+        type: String,
+        default: "#"
+    }
 })
 
 module.exports = mongoose.model('notifschema', NotifSchema);

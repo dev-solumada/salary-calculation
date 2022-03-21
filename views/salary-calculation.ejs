@@ -36,17 +36,30 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- SALARY UP -->
-                    <div class="card-body">
-                        <h4 class="card-title">SALARY UP</h4>
-                        <p class="card-description">Field to upload <code>SALARY UP</code> file.</p>
+                        <!-- SALARY UP -->
+                        <h4 class="card-title">Unified Post</h4>
+                        <p class="card-description">Field to upload <code>UP SALARY</code> file.</p>
                         <div class="template-demo">
                             <div class="form-group">
                                 <input type="file" name="salary-up" id="salary-up" class="file-upload-default" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
                                 <div class="input-group col-xs-12">
                                     <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
                                     <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'salary-up')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- AGROBOX -->
+                        <h4 class="card-title">AGROBOX</h4>
+                        <p class="card-description">Field to upload <code>AGROBOX SALARY</code> file.</p>
+                        <div class="template-demo">
+                            <div class="form-group">
+                                <input type="file" name="salary-agrobox" id="salary-agrobox" class="file-upload-default" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'salary-agrobox')">
                                         <i class="ti-file btn-icon-prepend"></i>
                                         Upload file
                                     </button>
@@ -61,7 +74,7 @@
                     </div>
                     <div class="card-body">
                         <h4 class="card-title">GLOBAL SALARY SHEET</h4>
-                        <p class="card-description">Field to upload <code>GLOBAL SALARY SHEET</code> file.</p>
+                        <p class="card-description">Field to upload <code>GSS</code> file.</p>
                         <div class="template-demo">
                             <div class="form-group">
                                 <input type="file" name="salary-sheet" id="salary-sheet" class="file-upload-default" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
@@ -73,6 +86,18 @@
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                        <div id="warnings" style="display: none;">
+                            
+                            <table class="table table-border">
+                                <thead>
+                                    <tr class="p-0">
+                                        <th colspan="2" class="text-warning">WARNINGS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="warning-field">
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -104,9 +129,11 @@
         let downloadBtn = document.getElementById('download');
         let loadingGif = document.getElementById('loading-gif');
         let downloadingP = document.getElementById('downloading-p');
-        var fileSelected1 = null;
-        var fileSelected2 = null;
-        var fileSelected3 = null;
+        let warning = document.getElementById('warnings');
+        var fileSelected1 = null,
+            fileSelected2 = null,
+            fileSelected3 = null,
+            fileSelected4 = null;
 
         function uploadClick(btn, id) {
             let inputfile = document.getElementById(id);
@@ -118,9 +145,10 @@
                         btn.previousElementSibling.remove();
                     }
                     if (inputfile.files.length > 0) {
-                        if (id === 'salary-sheet') fileSelected2 = inputfile.files;
-                        if (id === 'salary-up') fileSelected3 = inputfile.files;
                         if (id === 'rapport-rh') fileSelected1 = inputfile.files;
+                        if (id === 'salary-up') fileSelected2 = inputfile.files;
+                        if (id === 'salary-agrobox') fileSelected3 = inputfile.files;
+                        if (id === 'salary-sheet') fileSelected4 = inputfile.files;
                         let btnR = document.createElement('button');
                         btnR.className = 'btn btn btn-inverse-danger btn-fw reset';
                         let i = document.createElement('i');
@@ -138,9 +166,10 @@
 
                         
                     } else {
-                        if (id === 'salary-sheet') inputfile.files = fileSelected3;
-                        if (id === 'salary-up') inputfile.files = fileSelected2;
                         if (id === 'rapport-rh') inputfile.files = fileSelected1;
+                        if (id === 'salary-up') inputfile.files = fileSelected2;
+                        if (id === 'salary-agrobox') inputfile.files = fileSelected3;
+                        if (id === 'salary-sheet') inputfile.files = fileSelected4;
                     }
                     btn.parentElement.firstElementChild.value = inputfile.files[0].name;
                 });
@@ -151,19 +180,19 @@
             e.preventDefault();
             let file1 = document.getElementById('rapport-rh');
             let file2 = document.getElementById('salary-up');
-            let file3 = document.getElementById('salary-sheet');
+            let file3 = document.getElementById('salary-agrobox');
+            let file4 = document.getElementById('salary-sheet');
 
             let formData = new FormData();
             formData.append('rh_file', file1.files[0]);
             formData.append('salaryup_file', file2.files[0]);
-            formData.append('sheet_file', file3.files[0]);
-            // append salary up file
-
+            formData.append('salaryagrobox_file', file3.files[0]);
+            formData.append('sheet_file', file4.files[0]);
             // post form data
             const xhr = new XMLHttpRequest();
             xhr.responseType = 'json';
 
-            xhr.timeout = 20000; // time in milliseconds
+            xhr.timeout = 120000; // time in milliseconds
 
             xhr.ontimeout = function (e) {
                 // XMLHttpRequest timed out. Do something here.
@@ -172,7 +201,11 @@
                     text: 'Request timeout. Please check your connection!',
                     icon: 'error',
                     type: 'error',
-                })
+                }).then(e => {
+                    downloadBtn.disabled = false;
+                    loadingGif.style.opacity = '0';
+                    warnings.textContent = '';
+                });
             };
             // log response
             xhr.onload = () => {
@@ -197,6 +230,17 @@
                         type: 'error',
                     })
                 }
+                // show warning
+                if (xhr.response.warnings.length > 0) {
+                    warning.style.display = 'block';
+                    xhr.response.warnings.forEach((warn, index) => {
+                       document.getElementById('warning-field').innerHTML += `
+                       <tr class="table-warning">
+                            <td>${index+1}</td>
+                            <td>${warn.message}</td>
+                        </tr>`; 
+                    });
+                }
                 downloadBtn.disabled = false;
                 loadingGif.style.opacity = '0';
                 downloadingP.textContent = '';
@@ -208,6 +252,7 @@
             downloadBtn.disabled = true;
             loadingGif.style.opacity = '1';
             downloadingP.textContent = 'Processing...';
+            warnings.style.display = 'none';
         })
     </script>
 </div>

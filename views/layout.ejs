@@ -52,14 +52,20 @@
             <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="notificationDropdown">
               <p class="mb-0 font-weight-normal float-left dropdown-header">Notifications</p>
               <% notifs.forEach (notif => { %>
-              <a class="dropdown-item">
+              <a class="dropdown-item" href="<%= notif.link === '#' ? '#' : '/' +  notif.link %>" target="_blank">
                 <div class="item-thumbnail">
-                  <div class="item-icon bg-info">
+                  <div class="item-icon <%= notif.category === 'user' ? 'bg-success' : 'bg-primary' %>">
                     <i class="<%= notif.category === 'user' ? 'ti-user' : 'ti-book' %> mx-0"></i>
                   </div>
                 </div>
                 <div class="item-content">
                   <h6 class="font-weight-normal"><%= notif.description %></h6>
+                  <% if (notif.category === 'salary calculation') { %>
+                    <p class="font-weight-light small-text mb-0 text-muted">
+                      File: <span class="text-primary"><%= notif.file %></span>.<br>
+                      <span class="text-dark"><%= notif.exists ? 'It will be deleted in an hour. Click here to show it.' : 'This file is no longer available.' %></span>
+                    </p>
+                  <% } %>
                   <p class="font-weight-light small-text mb-0 text-muted">
                     <%= notif.moment %>
                   </p>
@@ -181,6 +187,9 @@
               window.location = '/logout';
             }
         });
+    }
+    const testLink = (param) => {
+      return param;
     }
   </script>
 </body>

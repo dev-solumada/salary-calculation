@@ -11,7 +11,9 @@ const columsNames = {
     shift: 'Shift Name',
     transpday: 'TRANSPORT JOUR',
     transpnight: 'TRANSPORT SOIR',
-    transp: 'TRANSPORT'
+    transp: 'TRANSPORT',
+    salaryUP: 'SALARY UP',
+    salaryAGROBOX: 'SALARY AGROBOX'
 }
 
 const colsIndexNames = () => {
@@ -350,15 +352,100 @@ function randomnNumberCode(length = 6) {
                 let info = DATA_RH.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
                 if (info) {
                     // salary 
-                    if (columsNames.salary in info) {
+                    if (columsNames.salaryUP in info) {
                         // cols to fill
                         if (colSalaryUp != '') {
                             let colIndex = colSalaryUp+line;
                             if (!ws[colIndex]) {
                                 ws[colIndex] = {t: 'n'}
                             }
-                            ws[colIndex].v = info[columsNames.salary];
-                            ws[colIndex].w = new String(info[columsNames.salary]);
+                            ws[colIndex].v = info[columsNames.salaryUP];
+                            ws[colIndex].w = new String(info[columsNames.salaryUP]);
+                        }
+                    }
+                }
+            }
+            line ++;
+        }
+    }
+
+    return {
+        agent_found : agent_found,
+        wb: combineStyle(newWorkbook, wb_style)
+    };
+}
+
+const getSalaryUPData = (ws) => {
+    const XLSX = require('xlsx');
+    var data = [];
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    for (let rowNum = 3; rowNum <= range.e.r; rowNum++) {
+        // loo all cells in the current column
+        let obj = {};
+        for (let colNum = range.s.c; colNum <= 3; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            // cell styled
+            const cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('A')) obj[columsNames.number] = cell.w;
+                if (cellName.includes('B')) obj[columsNames.mcode] = cell.w;
+                if (cellName.includes('C')) obj[columsNames.salaryUP] = parseFloat(cell.w) || 0;
+            }
+        // NOTE: secondCell is undefined if it does not exist (i.e. if its empty)
+        }
+        // if keys exist
+        if (columsNames.mcode in obj && columsNames.salaryUP in obj) 
+            data.push(obj);
+    }
+    return data;
+}
+
+/**
+ * AGROBOX
+ */
+
+ const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
+    var agent_found = 0;
+    const xlsx = require('xlsx');
+    // creer un nouveau work book
+    var newWorkbook = wb;
+    // parcourir tous les feuilles SHEETS
+    for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
+        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
+        // chercher ou se situe le 2000 et 1000
+        let colSalaryAgrobox = ''
+        if (i == 0) colSalaryAgrobox = 'F';
+        
+        if (i == 2) colSalaryAgrobox = 'G';
+        if (i == 3) colSalaryAgrobox = 'D';
+        if (i == 4) colSalaryAgrobox = 'H';
+        
+        if (i == 6) colSalaryAgrobox = 'C';
+        if (i == 8) colSalaryAgrobox = 'C';
+        
+        // total transport
+        let important_cols = ['A', 'B'];
+        let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
+        let line = parseInt(first_A_col.substring(1, first_A_col.length));
+        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        while (line <= rows.length) {
+            if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
+                // numbering agent
+                let numberingagent = new String(ws[important_cols[0]+line].w).trim();
+                let mcode = new String(ws[important_cols[1]+line].w).trim();
+                // get info via RH by M-CODE and Numbering Agent
+                let info = DATA_RH.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
+                if (info) {
+                    // salary 
+                    if (columsNames.salaryAGROBOX in info) {
+                        // cols to fill
+                        if (colSalaryAgrobox != '') {
+                            let colIndex = colSalaryAgrobox+line;
+                            if (!ws[colIndex]) {
+                                ws[colIndex] = {t: 'n'}
+                            }
+                            ws[colIndex].v = info[columsNames.salaryAGROBOX];
+                            ws[colIndex].w = new String(info[columsNames.salaryAGROBOX]);
                         }
                     }
                 }
@@ -373,7 +460,8 @@ function randomnNumberCode(length = 6) {
     };
     
 }
-const getSalaryData = (ws) => {
+
+const getSalaryAgroboxData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
@@ -385,14 +473,14 @@ const getSalaryData = (ws) => {
             // cell styled
             const cell = ws[cellName];
             if (cell) {
-                if (cellName.includes('B')) obj[columsNames.mcode] = cell.w;
                 if (cellName.includes('A')) obj[columsNames.number] = cell.w;
-                if (cellName.includes('C')) obj[columsNames.salary] = parseFloat(cell.w) || 0;
+                if (cellName.includes('B')) obj[columsNames.mcode] = cell.w;
+                if (cellName.includes('C')) obj[columsNames.salaryAGROBOX] = parseFloat(cell.w) || 0;
             }
         // NOTE: secondCell is undefined if it does not exist (i.e. if its empty)
         }
         // if keys exist
-        if (columsNames.mcode in obj && columsNames.salary in obj) 
+        if ((columsNames.mcode in obj || columsNames.number in obj) && columsNames.salaryAGROBOX in obj) 
             data.push(obj);
     }
     return data;
@@ -414,5 +502,7 @@ module.exports = {
     randomCode,
     randomnNumberCode,
     colsIndexNames,
-    getSalaryData,
+    getSalaryUPData,
+    getSalaryAgroboxData,
+    createOutputSalaryAGROBOX
 };
