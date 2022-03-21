@@ -708,6 +708,10 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
         } else {
             // file directory
             const DIR = await 'uploads';
+            // verifier le repertoire
+            if (!fs.existsSync(DIR)) {
+                await fs.mkdirSync(DIR);
+            }
             // files
             const FILES = req.files;
             // file keys
