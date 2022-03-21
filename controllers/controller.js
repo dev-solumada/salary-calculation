@@ -9,19 +9,6 @@ const SCSchema = require('../models/SCSchema');
 const NotifSchema = require('../models/NotifSchema');
 const nodemailer = require('nodemailer');
 const moment = require('moment');
-const { google } = require("googleapis");
-const OAuth2 = google.auth.OAuth2;
-
-const oauth2Client = new OAuth2(
-    process.env.APP_CLIENT_ID, // ClientID
-    process.env.APP_CLIENT_SECRET, // Client Secret
-    "https://developers.google.com/oauthplayground" // Redirect URL
-);
-
-oauth2Client.setCredentials({
-    refresh_token: process.env.REFRESH_TOKEN
-});
-const accessToken = oauth2Client.getAccessToken();
 
 //Mailing
 const transporter = nodemailer.createTransport({
@@ -29,10 +16,6 @@ const transporter = nodemailer.createTransport({
   auth: {
     user: process.env.MAIN_USER,
     pass: process.env.MAIN_PASS,
-    clientId: process.env.APP_CLIENT_ID,
-    clientSecret: process.env.APP_CLIENT_SECRET,
-    refreshToken: process.env.REFRESH_TOKEN,
-    accessToken: accessToken
   },
   tls: {
     rejectUnauthorized: false
@@ -708,11 +691,11 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
  router.route('/upload-xlsx').post(redirectLogin, async (req, res) => { 
     try {
         if(!req.files) {
-            res.send({
+            return res.send({
                 status: false,
                 icon: 'warning',
                 message: 'No files uploaded!'
-            }); return;
+            });
         } else {
             // use the name of the input field (i.e. "avatar") 
             // to retrieve the uploaded file
@@ -722,19 +705,19 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
 
             // No RH file selected
             if (!rh && !salary_up) {
-                res.send({
+                return res.send({
                     status: false,
                     icon: 'warning',
                     message: 'No file that contains data uploaded!'
-                }); return;
+                });
             } 
             // NO Sheet file selected
             if (!salary_sheet) {
-                res.send({
+                return res.send({
                     status: false,
                     icon: 'warning',
                     message: 'No GLOBAL SALARY Sheet file uploaded!'
-                }); return;
+                });
             }
 
             let dir = 'uploads'
@@ -764,11 +747,11 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 var ws = await script.getWS(wb_rh, 7);
                 // check sheets
                 if (!ws) {
-                    res.send({
+                    return res.send({
                         status: false,
                         icon: 'error',
                         message: 'No specified Sheetname found!'
-                    }); return;
+                    });
                 }
                 // fetch all data required
                 var data = await script.fetchData(ws);
@@ -784,7 +767,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     let output = await script.createOutput(data, wb_sheet, wb_sheet_style);
                     if (output.agent_found === 0) {
                         res.send({
-                            status: false,
+                            status: false, 
                             icon: 'error',
                             message: 'No Agent and Required Columns found in the GLOBAL SALARY SHEET! Please verify the file.'
                         });
