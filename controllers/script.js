@@ -379,7 +379,7 @@ const getSalaryUPData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
-    for (let rowNum = 3; rowNum <= range.e.r; rowNum++) {
+    for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
         // loo all cells in the current column
         let obj = {};
         for (let colNum = range.s.c; colNum <= 3; colNum++) {
@@ -465,7 +465,7 @@ const getSalaryAgroboxData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
-    for (let rowNum = 3; rowNum <= range.e.r; rowNum++) {
+    for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
         // loo all cells in the current column
         let obj = {};
         for (let colNum = range.s.c; colNum <= 3; colNum++) {
