@@ -231,7 +231,7 @@
                     })
                 }
                 // show warning
-                if (xhr.response.warnings.length > 0) {
+                if (Array.isArray(xhr.response.warnings) && xhr.response.warnings.length > 0) {
                     warning.style.display = 'block';
                     xhr.response.warnings.forEach((warn, index) => {
                        document.getElementById('warning-field').innerHTML += `
