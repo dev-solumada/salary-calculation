@@ -21,6 +21,11 @@ const transporter = nodemailer.createTransport({
     rejectUnauthorized: false
   }
 });
+// mongoo options
+const MongooOptions = {
+    useUnifiedTopology: true,
+    UseNewUrlParser: true,
+};
 
 
 const getAllUsers = async () => {
@@ -193,10 +198,7 @@ router.route('/find-username').post(redirectHome, (req, res) => {
     
     mongoose.connect(
         process.env.MONGO_URI,
-        {
-            useUnifiedTopology: true,
-            UseNewUrlParser: true,
-        }
+        MongooOptions
     ).then(async () => {
         const result = await UserSchema.findOne({$or: [{username: username}, {email: username}]});
         // if result is not null
@@ -346,7 +348,7 @@ router.route('/home').get(redirectLogin, async (req, res) => {
         active: 'home',
         active_sub: '',
         year: date.getFullYear(),
-        date_short: date.toLocaleDateString(),
+        date_short: script.getDateNow().join("/"),
         date_long: date.toDateString(),
         user: user,
         allUsers: allUsers,
@@ -384,10 +386,7 @@ router.route('/add-new-user').get(redirectLogin, async (req, res) => {
 router.route('/set-user-access').post(redirectLogin, (req, res) => {
     mongoose.connect(
     process.env.MONGO_URI,
-        {
-            useUnifiedTopology: true,
-            UseNewUrlParser: true,
-        }
+    MongooOptions
     ).then(async () => {
         // find all users
         let user = {access: req.body.access}
@@ -419,10 +418,7 @@ router.route('/set-user-access').post(redirectLogin, (req, res) => {
 router.route('/delete-user').post(redirectLogin, (req, res) => {
     mongoose.connect(
         process.env.MONGO_URI,
-        {
-            useUnifiedTopology: true,
-            UseNewUrlParser: true,
-        }
+        MongooOptions
     ).then(async () => {
         // find all users
         await UserSchema.findOneAndDelete({email: req.body.email});
@@ -454,10 +450,7 @@ router.route('/users-list').get(redirectLogin, checkType, async (req, res) => {
     const user = req.session.userId;
     mongoose.connect(
         process.env.MONGO_URI,
-        {
-            useUnifiedTopology: true,
-            UseNewUrlParser: true,
-        }
+        MongooOptions
     ).then(async () => {
         // find all users
         let users = await UserSchema.find();
@@ -481,10 +474,7 @@ router.route('/users-list').get(redirectLogin, checkType, async (req, res) => {
     const user = req.session.userId;
     mongoose.connect(
         process.env.MONGO_URI,
-        {
-            useUnifiedTopology: true,
-            UseNewUrlParser: true,
-        }
+        MongooOptions
     ).then(async () => {
         // find all users
         let users = await UserSchema.find();
@@ -507,10 +497,7 @@ router.route('/users-list').get(redirectLogin, checkType, async (req, res) => {
     const userS = req.session.userId;
     mongoose.connect(
         process.env.MONGO_URI,
-        {
-            useUnifiedTopology: true,
-            UseNewUrlParser: true,
-        }
+        MongooOptions
     ).then(async () => {
         if (req.method === 'POST') {
             let user = await {
@@ -597,10 +584,7 @@ router.route('/users-list').get(redirectLogin, checkType, async (req, res) => {
 router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
     mongoose.connect(
         process.env.MONGO_URI,
-        {
-            useUnifiedTopology: true,
-            UseNewUrlParser: true,
-        }
+        MongooOptions
     ).then(async () => {
         let user = await req.body;
 
@@ -744,7 +728,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             var wbo_sheet_style = await script.readWBxlsxstyle(GSSPATH);
             // create the output file name
             let date = new Date();
-            const OPFileName = await `${date.toLocaleDateString().replace(/\//g, '.')} GSS ${date.getTime()}.xlsx`;
+            const OPFileName = await `${script.getDateNow().join(".")} GSS ${date.getTime()}.xlsx`;
             const OPFilePath = await `${DIR}/${OPFileName}`;
             // warnigngs
             const Warnings = await [];
