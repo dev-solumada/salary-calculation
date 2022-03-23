@@ -922,7 +922,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         category: 'salary calculation',
                         description: 'Salary calculation: recent activity',
                         creation: new Date(),
-                        link: OPFileName
+                        link: OPFileName,
+                        user: req.session.userId.username
                     }
                     await new NotifSchema(notif).save();
                     

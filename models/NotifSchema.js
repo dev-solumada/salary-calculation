@@ -20,6 +20,10 @@ const NotifSchema = mongoose.Schema({
     link: {
         type: String,
         default: "#"
+    },
+    user: {
+        type: String,
+        default: ""
     }
 })
 
