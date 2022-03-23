@@ -87,18 +87,21 @@
                                 </div>
                             </div>
                         </div>
-                        <div id="warnings" style="display: none;">
-                            
-                            <table class="table table-border">
-                                <thead>
-                                    <tr class="p-0">
-                                        <th colspan="2" class="text-warning">WARNINGS</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="warning-field">
-                                </tbody>
-                            </table>
-                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div id="warnings" class="card-body" style="display: none;">
+                        <table class="table table-border">
+                            <thead>
+                                <tr class="p-0">
+                                    <th colspan="2" class="text-warning">WARNINGS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="warning-field">
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -129,7 +132,7 @@
         let downloadBtn = document.getElementById('download');
         let loadingGif = document.getElementById('loading-gif');
         let downloadingP = document.getElementById('downloading-p');
-        let warning = document.getElementById('warnings');
+        let warnings = document.getElementById('warnings');
         var fileSelected1 = null,
             fileSelected2 = null,
             fileSelected3 = null,
@@ -204,7 +207,7 @@
                 }).then(e => {
                     downloadBtn.disabled = false;
                     loadingGif.style.opacity = '0';
-                    warnings.textContent = '';
+                    downloadingP.textContent = '';
                 });
             };
             // log response
@@ -230,12 +233,14 @@
                         type: 'error',
                     })
                 }
+                document.getElementById('warning-field').innerHTML = '';
+
                 // show warning
                 if (Array.isArray(xhr.response.warnings) && xhr.response.warnings.length > 0) {
-                    warning.style.display = 'block';
+                    warnings.style.display = 'block';
                     xhr.response.warnings.forEach((warn, index) => {
                        document.getElementById('warning-field').innerHTML += `
-                       <tr class="table-warning">
+                       <tr class="table-${warn.icon}">
                             <td>${index+1}</td>
                             <td>${warn.message}</td>
                         </tr>`; 

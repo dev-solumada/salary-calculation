@@ -3,6 +3,11 @@ const getWS = (wb, indexOfSheet) => {
     return wb.Sheets[sheet_name];
 }
 
+// get sheetname
+const getSheetIndex = (wb, sheetname) => {
+    return wb.SheetNames.indexOf(sheetname);
+}
+
 // nom des colonnes
 const columsNames = {
     mcode: 'M-CODE',
@@ -494,6 +499,16 @@ function getDateNow() {
     return [day,  mnth, date.getFullYear()];
 }
 
+// delete file
+const deleteFile = (filePath, ms) => {
+    const fs = require('fs');
+    setTimeout(() => {
+        // check file if exists
+        if (fs.existsSync(filePath))
+            fs.unlinkSync(filePath);
+    }, ms);
+}
+
 // export functions
 module.exports = {
     readWBxlsx,
@@ -513,5 +528,7 @@ module.exports = {
     getSalaryUPData,
     getSalaryAgroboxData,
     createOutputSalaryAGROBOX,
-    getDateNow
+    getDateNow,
+    getSheetIndex,
+    deleteFile
 };
