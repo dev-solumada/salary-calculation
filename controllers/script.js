@@ -3,6 +3,11 @@ const getWS = (wb, indexOfSheet) => {
     return wb.Sheets[sheet_name];
 }
 
+// get sheetname
+const getSheetIndex = (wb, sheetname) => {
+    return wb.SheetNames.indexOf(sheetname);
+}
+
 // nom des colonnes
 const columsNames = {
     mcode: 'M-CODE',
@@ -379,7 +384,7 @@ const getSalaryUPData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
-    for (let rowNum = 3; rowNum <= range.e.r; rowNum++) {
+    for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
         // loo all cells in the current column
         let obj = {};
         for (let colNum = range.s.c; colNum <= 3; colNum++) {
@@ -465,7 +470,7 @@ const getSalaryAgroboxData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
-    for (let rowNum = 3; rowNum <= range.e.r; rowNum++) {
+    for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
         // loo all cells in the current column
         let obj = {};
         for (let colNum = range.s.c; colNum <= 3; colNum++) {
@@ -494,6 +499,16 @@ function getDateNow() {
     return [day,  mnth, date.getFullYear()];
 }
 
+// delete file
+const deleteFile = (filePath, ms) => {
+    const fs = require('fs');
+    setTimeout(() => {
+        // check file if exists
+        if (fs.existsSync(filePath))
+            fs.unlinkSync(filePath);
+    }, ms);
+}
+
 // export functions
 module.exports = {
     readWBxlsx,
@@ -513,5 +528,7 @@ module.exports = {
     getSalaryUPData,
     getSalaryAgroboxData,
     createOutputSalaryAGROBOX,
-    getDateNow
+    getDateNow,
+    getSheetIndex,
+    deleteFile
 };
