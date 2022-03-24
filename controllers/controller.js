@@ -681,7 +681,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
 /**
  * UPLOAD - RH file and Salary Sheet file.
  */
- router.route('/upload-xlsx').post(redirectLogin, async (req, res) => { 
+router.route('/upload-xlsx').post(redirectLogin, async (req, res) => { 
+    const {rh_sheetname, salaryup_sheetname, salaryagrobox_sheetname, joiner} = req.body;
     try {
         if(!req.files) {
             return res.send({
@@ -751,129 +752,165 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 // switch key file
                 switch (key) {
                     case 'rh_file':
-                        var sheetName = 'Repas & Transport';
-                        var sheetIndex = script.getSheetIndex(wbi, sheetName);
-                        //.get work sheet rh
-                        var ws = await script.getWS(wbi, sheetIndex);
-                        // check sheets
-                        if (!ws) {
+                        // rh sheetnames
+                        var sheetNames = await rh_sheetname.split(joiner);
+                        if (sheetNames.length === 1 && sheetNames[0] === '') {
                             Warnings.push({
                                 status: false,
                                 icon: 'warning',
-                                message: `The RH file has a problem. No "${sheetName}" sheetname found. Please check the file.`
+                                message: `Please, select any sheet name in the RH.`
                             });
                         } else {
-                            try {
-                                // fetch all data required
-                                var data = await script.fetchData(ws);
-                                // if data is empty
-                                if (data.length <= 0) {
+                            for (let i = 0; i < sheetNames.length; i++) {
+                                var sheetName = await sheetNames[i];
+                                var sheetIndex = await script.getSheetIndex(wbi, sheetName);
+                                //.get work sheet rh
+                                var ws = await script.getWS(wbi, sheetIndex);
+                                // check sheets
+                                if (!ws) {
                                     Warnings.push({
                                         status: false,
                                         icon: 'warning',
-                                        message: 'No data found in the RH file.'
+                                        message: `The RH file has a problem. No "${sheetName}" sheetname found. Please check the file.`
                                     });
                                 } else {
-                                    // output file
-                                    let output = await script.createOutput(data, wbo_sheet, wbo_sheet_style);
-                                    if (output.agent_found === 0) {
+                                    try {
+                                        // fetch all data required
+                                        var data = await script.fetchData(ws);
+                                        // if data is empty
+                                        if (data.length <= 0) {
+                                            Warnings.push({
+                                                status: false,
+                                                icon: 'warning',
+                                                message: 'No data found in the RH file.'
+                                            });
+                                        } else {
+                                            // output file
+                                            let output = await script.createOutput(data, wbo_sheet, wbo_sheet_style);
+                                            if (output.agent_found === 0) {
+                                                Warnings.push({
+                                                    status: false,
+                                                    icon: 'warning',
+                                                    message: 'No Agent and Required Columns found in the GLOBAL SALARY SHEET! Please verify the file.'
+                                                });
+                                            } else {
+                                                // if step one is done change the to the output file.
+                                                if (step !== 0)
+                                                wbo_sheet = await script.readWBxlsx(OPFilePath);
+                                                let output = await script.createOutput(data, wbo_sheet, wbo_sheet_style);
+                                                // save file
+                                                await script.saveFile(output.wb, OPFilePath);
+                                                step = await step + 1;
+                                            }
+                                        }
+                                    } catch (error) {
                                         Warnings.push({
                                             status: false,
-                                            icon: 'warning',
-                                            message: 'No Agent and Required Columns found in the GLOBAL SALARY SHEET! Please verify the file.'
+                                            icon: 'danger',
+                                            message: 'The RH file has a big problem.'
                                         });
-                                    } else {
-                                        // if step one is done change the to the output file.
-                                        if (step !== 0)
-                                        wbo_sheet = await script.readWBxlsx(OPFilePath);
-                                        let output = await script.createOutput(data, wbo_sheet, wbo_sheet_style);
-                                        // save file
-                                        await script.saveFile(output.wb, OPFilePath);
-                                        step = await step + 1;
                                     }
                                 }
-                            } catch (error) {
-                                Warnings.push({
-                                    status: false,
-                                    icon: 'danger',
-                                    message: 'The RH file has a big problem.'
-                                });
                             }
                         }
                         break;
                     // UNIFIED POST
                     case 'salaryup_file':
-                        var sheetName = 'UnifiedPost Salaris per agent';
-                        var sheetIndex = script.getSheetIndex(wbi, sheetName);
-                        ws = await script.getWS(wbi, sheetIndex);
-                        if (!ws) {
+                        // salaryUP sheetnames
+                        var sheetNames = await salaryup_sheetname.split(joiner);
+                        if (sheetNames.length === 1 && sheetNames[0] === '') {
                             Warnings.push({
                                 status: false,
                                 icon: 'warning',
-                                message: `The UP Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
+                                message: `Please, select any sheet name in the UP.`
                             });
                         } else {
-                            try {
-                                data = await script.getSalaryUPData(ws);
-                                // if data is empty
-                                if (data.length <= 0) {
+                            for (let i = 0; i < sheetNames.length; i++) {
+                                var sheetName = await sheetNames[i];
+                                var sheetIndex = script.getSheetIndex(wbi, sheetName);
+                                ws = await script.getWS(wbi, sheetIndex);
+                                if (!ws) {
                                     Warnings.push({
                                         status: false,
                                         icon: 'warning',
-                                        message: 'No data found in the UP Salary file! Please verify it.'
+                                        message: `The UP Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
                                     });
                                 } else {
-                                    // if step one is done change the to the output file.
-                                    if (step !== 0)
-                                        wbo_sheet = await script.readWBxlsx(OPFilePath);
-                                    let output = await script.createOutputSalaryUp(data, wbo_sheet, wbo_sheet_style);
-                                    await script.saveFile(output.wb, OPFilePath);
-                                    step = await step + 1;
+                                    try {
+                                        data = await script.getSalaryUPData(ws);
+                                        // if data is empty
+                                        if (data.length <= 0) {
+                                            Warnings.push({
+                                                status: false,
+                                                icon: 'warning',
+                                                message: 'No data found in the UP Salary file! Please verify it.'
+                                            });
+                                        } else {
+                                            // if step one is done change the to the output file.
+                                            if (step !== 0)
+                                                wbo_sheet = await script.readWBxlsx(OPFilePath);
+                                            let output = await script.createOutputSalaryUp(data, wbo_sheet, wbo_sheet_style);
+                                            await script.saveFile(output.wb, OPFilePath);
+                                            step = await step + 1;
+                                        }
+                                    } catch (error) {
+                                        Warnings.push({
+                                            status: false,
+                                            icon: 'danger',
+                                            message: 'The UP Salary file has a big problem.'
+                                        });
+                                    }
                                 }
-                            } catch (error) {
-                                Warnings.push({
-                                    status: false,
-                                    icon: 'danger',
-                                    message: 'The UP Salary file has a big problem.'
-                                });
                             }
                         }
                         break;
                     // AGROBOX
                     case 'salaryagrobox_file':
-                        var sheetName = 'agrobox salaries per agent';
-                        var sheetIndex = script.getSheetIndex(wbi, sheetName);
-                        ws = await script.getWS(wbi, sheetIndex);
-                        if (!ws) {
+                        // Agrobox sheetnames
+                        var sheetNames = await salaryagrobox_sheetname.split(joiner);
+                        if (sheetNames.length === 1 && sheetNames[0] === '') {
                             Warnings.push({
                                 status: false,
                                 icon: 'warning',
-                                message: `The Agrobox Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
+                                message: `Please, select any sheet name in the Agrobox.`
                             });
                         } else {
-                            try {
-                                data = await script.getSalaryAgroboxData(ws);
-                                // if data is empty
-                                if (data.length <= 0) {
+                            for (let i = 0; i < sheetNames.length; i++) {
+                                var sheetName = await sheetNames[i];
+                                var sheetIndex = script.getSheetIndex(wbi, sheetName);
+                                ws = await script.getWS(wbi, sheetIndex);
+                                if (!ws) {
                                     Warnings.push({
                                         status: false,
                                         icon: 'warning',
-                                        message: 'No data found in the Agrobox Salary file! Please verify it.'
+                                        message: `The Agrobox Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
                                     });
                                 } else {
-                                    // if step one is done change the to the output file.
-                                    if (step !== 0)
-                                        wbo_sheet = await script.readWBxlsx(OPFilePath);
-                                    let output = await script.createOutputSalaryAGROBOX(data, wbo_sheet, wbo_sheet_style);
-                                    await script.saveFile(output.wb, OPFilePath);
-                                    step = await step + 1;
+                                    try {
+                                        data = await script.getSalaryAgroboxData(ws);
+                                        // if data is empty
+                                        if (data.length <= 0) {
+                                            Warnings.push({
+                                                status: false,
+                                                icon: 'warning',
+                                                message: 'No data found in the Agrobox Salary file! Please verify it.'
+                                            });
+                                        } else {
+                                            // if step one is done change the to the output file.
+                                            if (step !== 0)
+                                                wbo_sheet = await script.readWBxlsx(OPFilePath);
+                                            let output = await script.createOutputSalaryAGROBOX(data, wbo_sheet, wbo_sheet_style);
+                                            await script.saveFile(output.wb, OPFilePath);
+                                            step = await step + 1;
+                                        }
+                                    } catch (error) {
+                                        Warnings.push({
+                                            status: false,
+                                            icon: 'danger',
+                                            message: 'The Agrobox Salary file has a big problem.'
+                                        });
+                                    }
                                 }
-                            } catch (error) {
-                                Warnings.push({
-                                    status: false,
-                                    icon: 'danger',
-                                    message: 'The Agrobox Salary file has a big problem.'
-                                });
                             }
                         }
                         break;

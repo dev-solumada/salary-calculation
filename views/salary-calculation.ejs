@@ -34,8 +34,8 @@
                                         Upload file
                                     </button>
                                 </div>
-                                <select class="form-control mt-1" style="display: none;" id="rapport-rh-sheetname">
-                                </select>
+                                <div class="checkbox">
+                                </div>
                             </div>
                         </div>
                         <!-- SALARY UP -->
@@ -51,8 +51,8 @@
                                         Upload file
                                     </button>
                                 </div>
-                                <select class="form-control mt-1" style="display: none;" id="salary-up-sheetname">
-                                </select>
+                                <div class="checkbox">
+                                </div>
                             </div>
                         </div>
                         <!-- AGROBOX -->
@@ -68,8 +68,8 @@
                                         Upload file
                                     </button>
                                 </div>
-                                <select class="form-control mt-1" style="display: none;" id="salary-agrobox-sheetname">
-                                </select>
+                                <div class="checkbox">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -150,6 +150,8 @@
                         btn.previousElementSibling.remove();
                     }
                     if (inputfile.files.length > 0) {
+                        if (id !== 'salary-sheet')
+                            parseExcelFile2(document.getElementById(id));
                         if (id === 'rapport-rh') fileSelected1 = inputfile.files;
                         if (id === 'salary-up') fileSelected2 = inputfile.files;
                         if (id === 'salary-agrobox') fileSelected3 = inputfile.files;
@@ -179,27 +181,8 @@
                     }
                     btn.parentElement.firstElementChild.value = inputfile.files[0].name;
                     let select = btn.parentElement.nextElementSibling;
-                        select.style.display = 'none';
-                    return;
-                    // afficher les noms des feuilles
-                    let inputElement = document.getElementById(id);
-                    var files = inputElement.files || [];
-                    if (!files.length) return;
-                    var file = files[0];
-                    var reader = new FileReader();
-                    reader.onloadend = function(event) {
-                        var arrayBuffer = reader.result;
-                        var workbook = new ExcelJS.Workbook();
-                        workbook.xlsx.load(arrayBuffer).then(function(workbook) {
-                            select.innerHTML = '<option value="" class="text-muted">Select the SheetName here</option>';
-                            for (let i = 0; i < workbook.worksheets.length; i++) {
-                                const sheet = workbook.worksheets[i];
-                                select.innerHTML += `<option value="${sheet.name}">${sheet.name}</option>`;
-                            }
-                            select.style.display = 'block';
-                        });
-                    };
-                    reader.readAsArrayBuffer(file);
+                    select.style.display = 'block';
+                    select.innerHTML = '<h6 class="pt-2 text-muted">Fetching sheet names...</h6>';
                 });
             }
         }
@@ -217,12 +200,15 @@
             formData.append('salaryagrobox_file', file3.files[0]);
             formData.append('sheet_file', file4.files[0]);
 
-            // sheet name 
-            // formData.append('rh_sheetname', file1.parentElement.lastElementChild.value);
-            // formData.append('salaryup_sheetname', file2.parentElement.lastElementChild.value);
-            // formData.append('salaryagrobox_sheetname', file3.parentElement.lastElementChild.value);
-
-            console.log(formData.values);
+            // sheetnames
+            let joiner = '</>';
+            let rhSheetNames = getCheckedList('rapport-rh').join(joiner);
+            formData.append('rh_sheetname', rhSheetNames);
+            let salaryUPSheetNames = getCheckedList('salary-up').join(joiner);
+            formData.append('salaryup_sheetname', salaryUPSheetNames);
+            let agroboxSheetNames = getCheckedList('salary-agrobox').join(joiner);
+            formData.append('salaryagrobox_sheetname', agroboxSheetNames);
+            formData.append('joiner', joiner);
 
             // post form data
             const xhr = new XMLHttpRequest();
@@ -290,6 +276,51 @@
             loadingGif.style.opacity = '1';
             downloadingP.textContent = 'Processing...';
             warnings.style.display = 'none';
-        })
+        });
+
+        function parseExcelFile2(inputElement) {
+            var files = inputElement.files || [];
+            if (!files.length) return;
+            var file = files[0];
+            var reader = new FileReader();
+            reader.onloadend = function(event) {
+                var arrayBuffer = reader.result;
+                var workbook = new ExcelJS.Workbook();
+                workbook.xlsx.load(arrayBuffer).then(function(workbook) {
+                    var Sheetsname = [];
+                    workbook.worksheets.forEach(function (sheet) {
+                        Sheetsname.push(sheet.name);
+                    })
+                    inputElement.parentElement.lastElementChild.innerHTML = '<h6 class="pt-2">* Sheet names:</h6>';
+                    let html = '';
+                    Sheetsname.forEach((s, i) => {
+                        let row = (i % 2 == 0) ? '<div class="row px-3">' : '';
+                        let closeRow = !(i % 2 == 0) ? '</div>' : '';
+                        let checkBox= `
+                        ${row}
+                            <div class="form-check col-sm-6">
+                                <label class="form-check-label">
+                                <input type="checkbox" class="form-check-input ${inputElement.id}" value="${s}">
+                                ${s}
+                                <i class="input-helper"></i></label>
+                            </div>
+                        ${closeRow}`;
+                        html += checkBox;
+                    });
+                    inputElement.parentElement.lastElementChild.innerHTML += html;
+                    
+                    inputElement.parentElement.lastElementChild.style.display = 'block';
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function getCheckedList(className) {
+            let data = [];
+            for (let s of document.querySelectorAll('.' + className)) {
+                if (s.checked) data.push(s.value);
+            }
+            return data;
+        }
     </script>
 </div>
