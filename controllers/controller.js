@@ -877,6 +877,45 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                             }
                         }
                         break;
+                    case 'salaryarco_file':
+                        var sheetName = 'Summary';
+                        var sheetIndex = script.getSheetIndex(wbi, sheetName);
+                        ws = await script.getWS(wbi, 1);
+
+                        if (!ws) {
+                            Warnings.push({
+                                status: false,
+                                icon: 'warning',
+                                message: `The Arco Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
+                            });
+                        } else {
+                            try {
+                                data = await script.getSalaryArcoData(ws);
+                                // if data is empty
+                                if (data.length <= 0) {
+                                    Warnings.push({
+                                        status: false,
+                                        icon: 'warning',
+                                        message: 'No data found in the Arco Salary file! Please verify it.'
+                                    });
+                                } else {
+                                    // if step one is done change the to the output file.
+                                    if (step !== 0)
+                                        wbo_sheet = await script.readWBxlsx(OPFilePath);
+                                    let output = await script.createOutputSalaryARCO(data, wbo_sheet, wbo_sheet_style);
+                                    await script.saveFile(output.wb, OPFilePath);
+                                    step = await step + 1;
+                                }
+                            } catch (error) {
+                                console.log(error);
+                                Warnings.push({
+                                    status: false,
+                                    icon: 'danger',
+                                    message: 'The Agrobox Salary file has a big problem.'
+                                });
+                            }
+                        }
+                        break;
                     default:
                         break;
                 }
@@ -922,10 +961,10 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         category: 'salary calculation',
                         description: 'Salary calculation: recent activity',
                         creation: new Date(),
-                        link: OPFileName
+                        link: OPFileName,
+                        user: req.session.userId.username
                     }
                     await new NotifSchema(notif).save();
-                    
                     
                 }).catch(err => {
                     res.send({
@@ -951,6 +990,208 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
         res.status(500).send({status: false, icon: 'error', message: 'Server error!'});
     }
 });
+
+
+
+/**
+ * UPLOAD - ARCO FILE
+ */
+ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => { 
+    try {
+        if(!req.files) {
+            return res.send({
+                status: false,
+                icon: 'warning',
+                message: 'No files uploaded!'
+            });
+        } else {
+            // file directory
+            const DIR = await 'uploads';
+            // verifier le repertoire
+            if (!fs.existsSync(DIR)) {
+                await fs.mkdirSync(DIR);
+            }
+            // files
+            const FILES = req.files;
+            // file keys
+            const FileKeys = await Object.keys(FILES);
+            // get the global salary sheet
+            const ARCOFile = await req.files['arco_salary'];
+            // check files
+            // NO Sheet file selected
+            if (!ARCOFile) {
+                return res.send({
+                    status: false,
+                    icon: 'warning',
+                    message: 'No ARCO Salary file uploaded!'
+                });
+            }
+            // No file that contains all data selected
+            if (FileKeys.length === 1) {
+                return res.send({
+                    status: false,
+                    icon: 'warning',
+                    message: 'No ARCO Report file uploaded!'
+                });
+            } 
+            // time to file
+            const time = new Date().getTime();
+            // gs path
+            const ARCOPath = await `${DIR}/${ARCOFile.name.split('.xlsx')[0]}_${time}.xlsx`;
+            // COPY GSS FILE
+            await ARCOFile.mv(ARCOPath);
+            // read sheet output file
+            var wbo_sheet = await script.readWBxlsx(ARCOPath);
+            var wbo_sheet_style = await script.readWBxlsxstyle(ARCOPath);
+            // create the output file name
+            let date = new Date();
+            const OPFileName = await `${script.getDateNow().join(".")} ARCO SALARIES WORKING CORRECTED ${date.getTime()}.xlsx`;
+            const OPFilePath = await `${DIR}/${OPFileName}`;
+            // warnigngs
+            const Warnings = await [];
+            // loop keys 
+            for (let i = 0; i < FileKeys.length; i++) {
+                let key = FileKeys[i];
+                // get file
+                let file = await FILES[key];
+                let filePath = await `${DIR}/${file.name.split('.xlsx')[0]}_${time}.xlsx`;
+                // move file
+                await file.mv(filePath);
+                // set file timeout to delete
+                await script.deleteFile(filePath, 30000);
+                // read excel file
+                var wbi = await script.readWBxlsxstyle(filePath);
+                // switch key file
+                switch (key) {
+                    case 'arco_report':
+                        var sheetIndex = 0 ; //script.getSheetIndex(wbi, sheetName);
+                        //.get work sheet rh
+                        var ws = await script.getWS(wbi, sheetIndex);
+                        // check sheets
+                        if (!ws) {
+                            Warnings.push({
+                                status: false,
+                                icon: 'warning',
+                                message: `The ARCO Report file has a problem.`
+                            });
+                        } else {
+                            try {
+                                // fetch all data required
+                                var data = await script.getArcoCellsValue(ws);
+                                // if data is empty
+                                if (data.length <= 0) {
+                                    Warnings.push({
+                                        status: false,
+                                        icon: 'warning',
+                                        message: 'No data found in the ARCO Report file.'
+                                    });
+                                } else {
+                                    // if step one is done change the to the output file.
+                                    let output = script.combineStyle2(script.copyAndPasteARCO(data, wbo_sheet), wbo_sheet_style);
+                                    // save file
+                                    await script.saveFile(output, OPFilePath);
+                                }
+                            } catch (error) {
+                                console.log(error)
+                                Warnings.push({
+                                    status: false,
+                                    icon: 'danger',
+                                    message: 'There are somme errors.'
+                                });
+                            }
+                        }
+                        break;
+                }
+            }
+
+            // FINISHED check file
+            if (step > 0 && fs.existsSync(OPFilePath)) {
+                // set timeout for the output file
+                await setTimeout(() => {
+                    fs.unlinkSync(OPFilePath);
+                }, 1000 * 60 * 60);
+                //send response
+                await res.send({
+                    status: true,
+                    icon: 'success',
+                    message: 'The file is proccessed successfully.',
+                    file: OPFileName,
+                    warnings: Warnings
+                });
+                // save info to database
+                mongoose.connect(
+                    process.env.MONGO_URI,
+                    {
+                        useUnifiedTopology: true,
+                        UseNewUrlParser: true,
+                    }
+                ).then(async () => {
+                    let info = await SCSchema.find();
+                    if (info[0]) {
+                        info[0].number += 1;
+                        info[0].creation = new Date();
+                        await SCSchema.findOneAndUpdate({name: 'info'}, info[0])
+                    } else {
+                        let newinfo = {
+                            name: 'info',
+                            number: 1
+                        }
+                        await new SCSchema(newinfo).save();
+                    }
+                    
+                    // set notif
+                    let notif = {
+                        category: 'correct arco',
+                        description: 'ARCO Correction: Recent Activity',
+                        creation: new Date(),
+                        link: OPFileName,
+                        user: req.session.userId.username
+                    }
+                    await new NotifSchema(notif).save();
+                    
+                }).catch(err => {
+                    res.send({
+                        target: 'database',
+                        status: false,
+                        message: 'Unable to connect the database.'
+                    });
+                });
+            } else {
+                //send response
+                await res.send({
+                    status: false,
+                    icon: 'warning',
+                    message: 'Can not perform the program.',
+                    file: OPFileName,
+                    warnings: Warnings
+                });
+            }
+            return;
+        }
+    } catch (err) {
+        console.log(err)
+        res.status(500).send({status: false, icon: 'error', message: 'Server error!'});
+    }
+});
+
+router.route('/correct-arco').get(redirectLogin, checkType, async (req, res) => {
+    const user = req.session.userId;
+    mongoose.connect(
+        process.env.MONGO_URI,
+        MongooOptions
+    ).then(async () => {
+        // notifications
+        let notifs = await getNotifs();
+        return res.render('correct-arco', {login: false, active: 'programmes', active_sub: 'correct-arco', year: new Date().getFullYear(), user: user, notifs: notifs});
+    }).catch(err => {
+        res.send({
+            target: 'database',
+            status: false,
+            message: 'Unable to connect the database.'
+        });
+    })
+});
+
 
 router.route('/fetch-sheets').post(async function(res, req) {
     const {id} = req.body;

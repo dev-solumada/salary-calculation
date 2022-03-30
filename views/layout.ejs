@@ -59,7 +59,7 @@
                   </div>
                   <div class="item-content">
                     <h6 class="font-weight-normal"><%= notif.description %></h6>
-                    <% if (notif.category === 'salary calculation') { %>
+                    <% if (notif.category === 'salary calculation' && user.username === notif.user) { %>
                       <p class="font-weight-light small-text mb-0 text-muted">
                         <span class="text-primary"><%= notif.file %></span>.<br>
                         <span class="text-dark"><%= notif.exists ? 'It will be deleted in an hour. Click here to show it.' : 'This file is no longer available.' %></span>
@@ -114,6 +114,7 @@
               <div class="collapse <%= active === 'programmes' ? 'show' : '' %>" id="ui-basic">
                 <ul class="nav flex-column sub-menu">
                   <li class="nav-item"><a class="nav-link <%= active_sub === 'salary-calculation' ? 'active' : '' %>" href="/salary-calculation">Salary Calculation</a></li>
+                  <li class="nav-item"><a class="nav-link <%= active_sub === 'correct-arco' ? 'active' : '' %>" href="/correct-arco">Correct ARCO</a></li>
                 </ul>
               </div>
             </li>

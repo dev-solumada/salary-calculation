@@ -18,7 +18,8 @@ const columsNames = {
     transpnight: 'TRANSPORT SOIR',
     transp: 'TRANSPORT',
     salaryUP: 'SALARY UP',
-    salaryAGROBOX: 'SALARY AGROBOX'
+    salaryAGROBOX: 'SALARY AGROBOX',
+    salaryARCO: 'SALARY ARCO',
 }
 
 const colsIndexNames = () => {
@@ -78,7 +79,6 @@ const combineStyle = (wb_xlsx, wb_xlsx_style) => {
                     }
                 }
             }
-            // NOTE: secondCell is undefined if it does not exist (i.e. if its empty)
         }
         
     }
@@ -86,6 +86,46 @@ const combineStyle = (wb_xlsx, wb_xlsx_style) => {
     return wb_xlsx_style;
 }
 
+
+
+const combineStyle2 = (wb_xlsx, wb_xlsx_style) => {
+    const XLSX = require('xlsx')
+    let sheets_leng = wb_xlsx.SheetNames.length;
+    for (let i = 0; i < sheets_leng; i++) {
+        let ws = wb_xlsx.Sheets[wb_xlsx.SheetNames[i]];
+        let ws_s = wb_xlsx_style.Sheets[wb_xlsx_style.SheetNames[i]];
+        var range = XLSX.utils.decode_range(ws['!ref']);
+        Object.keys(ws).forEach(key => {
+            if (ws_s[key]) {
+                let s = ws_s[key].s;
+                ws_s[key] = ws[key];
+                ws_s[key].s = s;
+            }
+        });
+        /* ELIMINER LES BACKGROUND NOIR */
+        for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
+            // loo all cells in the current column
+            for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+                let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+                // cell styled
+                const cellStyled = ws_s[cellName];
+                if (cellStyled && cellStyled.s) {
+                    if (cellStyled.s.fill && cellStyled.s.fill.bgColor) {
+                        if (cellStyled.s.fill.fgColor.rgb === '000000') { // if bg is dark
+                            cellStyled.s.fill.fgColor = {}; // set bg to white
+                            let style = cellStyled.s;
+                            delete style.fgColor;
+                            delete cellStyled.s.fill;
+                            ws_s[cellName].s = style;
+                        }   
+                    }
+                }
+            }
+        }
+    }
+
+    return wb_xlsx_style;
+}
 
 // arrange transport
 const arrangeTRANSPORTS = (ws) => {
@@ -409,7 +449,7 @@ const getSalaryUPData = (ws) => {
  * AGROBOX
  */
 
- const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
+const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
     var agent_found = 0;
     const xlsx = require('xlsx');
     // creer un nouveau work book
@@ -419,14 +459,13 @@ const getSalaryUPData = (ws) => {
         let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
         // chercher ou se situe le 2000 et 1000
         let colSalaryAgrobox = ''
-        if (i == 0) colSalaryAgrobox = 'F';
+        if (i == 0) colSalaryAgrobox = 'D';
         
         if (i == 2) colSalaryAgrobox = 'G';
         if (i == 3) colSalaryAgrobox = 'D';
         if (i == 4) colSalaryAgrobox = 'H';
         
-        if (i == 6) colSalaryAgrobox = 'C';
-        if (i == 8) colSalaryAgrobox = 'C';
+        if (i == 6 || i == 8) colSalaryAgrobox = 'C';
         
         // total transport
         let important_cols = ['A', 'B'];
@@ -480,7 +519,7 @@ const getSalaryAgroboxData = (ws) => {
             if (cell) {
                 if (cellName.includes('A')) obj[columsNames.number] = cell.w;
                 if (cellName.includes('B')) obj[columsNames.mcode] = cell.w;
-                if (cellName.includes('C')) obj[columsNames.salaryAGROBOX] = parseFloat(cell.w) || 0;
+                if (cellName.includes('C')) obj[columsNames.salaryAGROBOX] = parseFloat(cell.v) || 0;
             }
         // NOTE: secondCell is undefined if it does not exist (i.e. if its empty)
         }
@@ -491,7 +530,88 @@ const getSalaryAgroboxData = (ws) => {
     return data;
 }
 
-// convert date to dd.mm.yyy
+/**
+ * ACRO
+ */
+
+const createOutputSalaryARCO = (DATA_RH = [], wb, wb_style) => {
+    var agent_found = 0;
+    const xlsx = require('xlsx');
+    // creer un nouveau work book
+    var newWorkbook = wb;
+    // parcourir tous les feuilles SHEETS
+    for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
+        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
+        // chercher ou se situe le 2000 et 1000
+        let colSalaryArco = ''
+        if (i == 0 || i == 5) colSalaryArco = 'D';
+        
+        if (i == 1 || i == 2) colSalaryArco = 'C';
+        
+        // total transport
+        let important_cols = ['A', 'B'];
+        let line = 0;
+        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        while (line <= rows.length) {
+            if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
+                // numbering agent
+                let numberingagent = new String(ws[important_cols[0]+line].w).trim();
+                let mcode = new String(ws[important_cols[1]+line].w).trim();
+                // get info via RH by M-CODE and Numbering Agent
+                let info = DATA_RH.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
+                if (info) {
+                    // salary 
+                    if (columsNames.salaryARCO in info) {
+                        // cols to fill
+                        if (colSalaryArco != '') {
+                            let colIndex = colSalaryArco+line;
+                            if (!ws[colIndex]) {
+                                ws[colIndex] = {t: 'n'}
+                            }
+                            ws[colIndex].v = info[columsNames.salaryARCO];
+                            ws[colIndex].w = new String(info[columsNames.salaryARCO]);
+                        }
+                    }
+                }
+            }
+            line ++;
+        }
+    }
+
+    return {
+        agent_found : agent_found,
+        wb: combineStyle(newWorkbook, wb_style)
+    };
+    
+}
+
+const getSalaryArcoData = (ws) => {
+    const XLSX = require('xlsx');
+    var data = [];
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
+        // loo all cells in the current column
+        let obj = {};
+        for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            // cell styled
+            const cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('J')) obj[columsNames.number] = cell.w;
+                if (cellName.includes('I')) obj[columsNames.mcode] = cell.w;
+                if (cellName.includes('L')) {
+                    obj[columsNames.salaryARCO] = parseFloat(cell.v) || 0;
+                }
+            }
+        }
+        // if keys exist
+        if ((columsNames.mcode in obj || columsNames.number in obj) && columsNames.salaryARCO in obj) 
+            data.push(obj);
+    }
+    return data;
+}
+
+// convert date to [dd,mm,yyyy]
 function getDateNow() {
     var date = new Date(Date.now()),
     mnth = ("0" + (date.getMonth() + 1)).slice(-2),
@@ -509,10 +629,93 @@ const deleteFile = (filePath, ms) => {
     }, ms);
 }
 
+/**
+ * CORRECT ARCO SALARY
+ */
+
+const getArcoCellsValue = (ws) => {
+    const XLSX = require('xlsx');
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    var data = {};
+    // rows
+    for (let rowNum = 24; rowNum <= range.e.r; rowNum++) {
+        // cells
+        for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            let cell = ws[cellName];
+            if (cell) {
+                let newCell = cellName.substring(0, 1) + (cellName.substring(1, cellName.length) - 23);
+                data[newCell] = cell;
+            }
+        }
+    }
+    return data;
+}
+
+const copyAndPasteARCO = (data, wb) => {
+    const XLSX = require('xlsx');
+    var newWorkbook = wb;
+    let ws = newWorkbook.Sheets[newWorkbook.SheetNames[0]];
+    Object.keys(data).forEach(key => {ws[key] = data[key];});
+
+    return setFormula(newWorkbook);
+}
+
+const setFormula = (wb) => {
+    const XLSX = require('xlsx');
+    let ws = wb.Sheets[wb.SheetNames[1]];
+    // looping throup sheet 2
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    // rows
+    for (let rowNum = 9; rowNum <= range.e.r; rowNum++) {
+        let f = `SUMIF(${wb.SheetNames[0]}!C2:'${wb.SheetNames[0]}'!C${range.e.r},Summary!C${rowNum},${wb.SheetNames[0]}!D2:'${wb.SheetNames[0]}'!D${range.e.r})`;
+        if (typeof ws['D'+rowNum] === 'object') ws['D'+rowNum].f = f;
+        f = `SUMIF(${wb.SheetNames[0]}!F2:'${wb.SheetNames[0]}'!F${range.e.r},Summary!C${rowNum},${wb.SheetNames[0]}!D2:'${wb.SheetNames[0]}'!D${range.e.r})`;
+        if (typeof ws['E'+rowNum] === 'object') ws['E'+rowNum].f = f;
+    }
+    return wb;
+}
+
+const getARCOValidationFiltered = (ws) => {
+    const XLSX = require('xlsx');
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    var data = [];
+    // rows
+    for (let rowNum = 24; rowNum <= range.e.r; rowNum++) {
+        // cells
+        let obj = {};
+        for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            let cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('A')) obj[ws['A24'].v] = cell.w;
+                if (cellName.includes('C')) obj['M-CODE'] = cell.w;
+                if (cellName.includes('D')) obj['v1'] = cell.v;
+                if (cellName.includes('E')) obj['v2'] = cell.v;
+            }
+        }
+        if (Object.keys(obj).length > 0) data.push(obj);
+    }
+    return data;
+}
+
+const getTotalValidationARCO = (data = [], filterKey) => {
+    let newData = data.filter(e => e['M-CODE'] === filterKey);
+    if (newData.length > 0) {
+        let v1Total = newData.map(e => e['v1']).reduce((a, b) => a + b, 0);
+        let v2Total = newData.map(e => e['v2']).reduce((a, b) => a + b, 0);
+        return {'v1Total': v1Total, 'v2Total': v2Total};
+    } else {
+        return null;
+    }
+}
+
 // export functions
 module.exports = {
     readWBxlsx,
     readWBxlsxstyle,
+    combineStyle,
+    combineStyle2,
     arrangeTRANSPORTS,
     getColumnName,
     groupCol,
@@ -528,7 +731,16 @@ module.exports = {
     getSalaryUPData,
     getSalaryAgroboxData,
     createOutputSalaryAGROBOX,
+    getSalaryArcoData,
+    createOutputSalaryARCO,
     getDateNow,
     getSheetIndex,
-    deleteFile
+    deleteFile,
+    // correction
+    getArcoCellsValue,
+    copyAndPasteARCO,
+    getARCOValidationFiltered,
+    getTotalValidationARCO,
+
+    setFormula
 };
