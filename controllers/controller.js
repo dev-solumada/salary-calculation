@@ -1049,6 +1049,9 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             const OPFilePath = await `${DIR}/${OPFileName}`;
             // warnigngs
             const Warnings = await [];
+            // data from acro report
+            var Data = {};
+            let lastIndex = 0;
             // loop keys 
             for (let i = 0; i < FileKeys.length; i++) {
                 let key = FileKeys[i];
@@ -1062,50 +1065,53 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 // read excel file
                 var wbi = await script.readWBxlsxstyle(filePath);
                 // switch key file
-                switch (key) {
-                    case 'arco_report':
-                        var sheetIndex = 0 ; //script.getSheetIndex(wbi, sheetName);
-                        //.get work sheet rh
-                        var ws = await script.getWS(wbi, sheetIndex);
-                        // check sheets
-                        if (!ws) {
-                            Warnings.push({
-                                status: false,
-                                icon: 'warning',
-                                message: `The ARCO Report file has a problem.`
-                            });
-                        } else {
-                            try {
-                                // fetch all data required
-                                var data = await script.getArcoCellsValue(ws);
-                                // if data is empty
-                                if (data.length <= 0) {
-                                    Warnings.push({
-                                        status: false,
-                                        icon: 'warning',
-                                        message: 'No data found in the ARCO Report file.'
-                                    });
-                                } else {
-                                    // if step one is done change the to the output file.
-                                    let output = script.combineStyle2(script.copyAndPasteARCO(data, wbo_sheet), wbo_sheet_style);
-                                    // save file
-                                    await script.saveFile(output, OPFilePath);
-                                }
-                            } catch (error) {
-                                console.log(error)
+                if (key.includes('arco_report')) {
+                    var sheetIndex = 0 ; //script.getSheetIndex(wbi, sheetName);
+                    //.get work sheet rh
+                    var ws = await script.getWS(wbi, sheetIndex);
+                    // check sheets
+                    if (!ws) {
+                        Warnings.push({
+                            status: false,
+                            icon: 'warning',
+                            message: `The ARCO Report file has a problem.`
+                        });
+                    } else {
+                        try {
+                            // fetch all data required
+                            var data = await script.getArcoCellsValue(ws, lastIndex);
+                            // if data is empty
+                            if (Object.keys(data).length <= 0) {
                                 Warnings.push({
                                     status: false,
-                                    icon: 'danger',
-                                    message: 'There are somme errors.'
+                                    icon: 'warning',
+                                    message: 'No data found in the ARCO Report file number ' + (i + 1) + '.'
                                 });
+                            } else {
+                                Object.assign(Data, data);
+                                // set last index
+                                let cellName = Object.keys(data)[Object.keys(data).length-1];
+                                lastIndex = parseInt(cellName.substring(1, cellName.length)); 
                             }
+                        } catch (error) {
+                            console.log(error)
+                            Warnings.push({
+                                status: false,
+                                icon: 'danger',
+                                message: 'There are somme errors.'
+                            });
                         }
-                        break;
+                    }
                 }
             }
 
+            // save file
+            let output = await script.combineStyle2(script.copyAndPasteARCO(Data, wbo_sheet), wbo_sheet_style);
+            // save file
+            await script.saveFile(output, OPFilePath);
+
             // FINISHED check file
-            if (step > 0 && fs.existsSync(OPFilePath)) {
+            if (fs.existsSync(OPFilePath)) {
                 // set timeout for the output file
                 await setTimeout(() => {
                     fs.unlinkSync(OPFilePath);
@@ -1118,6 +1124,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     file: OPFileName,
                     warnings: Warnings
                 });
+                console.log('vita');
                 // save info to database
                 mongoose.connect(
                     process.env.MONGO_URI,

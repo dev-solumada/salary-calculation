@@ -238,19 +238,13 @@
             formData.append('salaryagrobox_file', file3.files[0]);
             formData.append('salaryarco_file', file4.files[0]);
             formData.append('sheet_file', file5.files[0]);
-
-            // sheet name 
-            // formData.append('rh_sheetname', file1.parentElement.lastElementChild.value);
-            // formData.append('salaryup_sheetname', file2.parentElement.lastElementChild.value);
-            // formData.append('salaryagrobox_sheetname', file3.parentElement.lastElementChild.value);
-
             console.log(formData.values);
 
             // post form data
             const xhr = new XMLHttpRequest();
             xhr.responseType = 'json';
 
-            xhr.timeout = 120000; // time in milliseconds
+            xhr.timeout = 1000 * 60 * 5; // time in milliseconds
 
             xhr.ontimeout = function (e) {
                 // XMLHttpRequest timed out. Do something here.

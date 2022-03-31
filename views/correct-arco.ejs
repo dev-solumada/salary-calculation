@@ -23,13 +23,37 @@
                     <!-- RH FILE -->
                     <div class="card-body">
                         <h4 class="card-title">Arco Report With Correction Factor Related To Different Shifts</h4>
-                        <p class="card-description">Field to upload <code>ARCO Repost</code> file. </p>
+                        <p class="card-description">Field to upload <code>ARCO Repost</code> files. </p>
                         <div class="template-demo">
                             <div class="form-group">
-                                <input type="file" name="arco-report" id="arco-report" class="file-upload-default" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <input type="file" name="arco-report" id="arco-report-0" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
                                 <div class="input-group col-xs-12">
                                     <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
-                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report')">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-0')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="arco-report-sheetname">
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <input type="file" name="arco-report" id="arco-report-1" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-1')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="arco-report-sheetname">
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <input type="file" name="arco-report" id="arco-report-2" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-2')">
                                         <i class="ti-file btn-icon-prepend"></i>
                                         Upload file
                                     </button>
@@ -42,11 +66,11 @@
                 </div>
                 <div class="col-md-6">
                     <div class="card-body">
-                        <h4 class="card-title text-dark">The file in which we will copy the data.</h4>
+                        <h4 class="card-title text-dark">The files in which we will copy the data.</h4>
                     </div>
                     <div class="card-body">
                         <h4 class="card-title">ARCO SALARIES WORKINGS</h4>
-                        <p class="card-description">Field to upload <code>ARCO Salaries</code> file.</p>
+                        <p class="card-description">Field to upload <code>ARCO Salaries</code> files.</p>
                         <div class="template-demo">
                             <div class="form-group">
                                 <input type="file" name="arco-salary" id="arco-salary" class="file-upload-default" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
@@ -102,7 +126,9 @@
         let downloadingP = document.getElementById('downloading-p');
         let warnings = document.getElementById('warnings');
         var fileSelected1 = null,
-            fileSelected2 = null;
+            fileSelected2 = null,
+            fileSelected3 = null,
+            fileSelected4 = null;
 
         function uploadClick(btn, id) {
             let inputfile = document.getElementById(id);
@@ -114,8 +140,10 @@
                         btn.previousElementSibling.remove();
                     }
                     if (inputfile.files.length > 0) {
-                        if (id === 'arco-report') fileSelected1 = inputfile.files;
-                        if (id === 'arco-salary') fileSelected2 = inputfile.files;
+                        if (id === 'arco-report-0') fileSelected1 = inputfile.files;
+                        if (id === 'arco-report-1') fileSelected2 = inputfile.files;
+                        if (id === 'arco-report-2') fileSelected3 = inputfile.files;
+                        if (id === 'arco-salary') fileSelected4 = inputfile.files;
                         let btnR = document.createElement('button');
                         btnR.className = 'btn btn btn-inverse-danger btn-fw reset';
                         let i = document.createElement('i');
@@ -134,8 +162,10 @@
 
                         
                     } else {
-                        if (id === 'arco-report') inputfile.files = fileSelected1;
-                        if (id === 'arco-salary') inputfile.files = fileSelected2;
+                        if (id === 'arco-report-0') inputfile.files = fileSelected1;
+                        if (id === 'arco-report-2') inputfile.files = fileSelected2;
+                        if (id === 'arco-report-3') inputfile.files = fileSelected3;
+                        if (id === 'arco-salary') inputfile.files = fileSelected4;
                     }
                     btn.parentElement.firstElementChild.value = inputfile.files[0].name;
                     let select = btn.parentElement.nextElementSibling;
@@ -166,17 +196,21 @@
 
         document.forms[0].addEventListener('submit', (e) => {
             e.preventDefault();
-            let file1 = document.getElementById('arco-report');
-            let file2 = document.getElementById('arco-salary');
+            let file1 = document.getElementById('arco-report-0');
+            let file2 = document.getElementById('arco-report-1');
+            let file3 = document.getElementById('arco-report-2');
+            let file4 = document.getElementById('arco-salary');
 
             let formData = new FormData();
-            formData.append('arco_report', file1.files[0]);
-            formData.append('arco_salary', file2.files[0]);
+            formData.append('arco_report_1', file1.files[0]);
+            formData.append('arco_report_2', file2.files[0]);
+            formData.append('arco_report_3', file3.files[0]);
+            formData.append('arco_salary', file4.files[0]);
             // post form data
             const xhr = new XMLHttpRequest();
             xhr.responseType = 'json';
 
-            xhr.timeout = 120000; // time in milliseconds
+            xhr.timeout = 1000 * 60 * 5; // time in milliseconds
 
             xhr.ontimeout = function (e) {
                 // XMLHttpRequest timed out. Do something here.
