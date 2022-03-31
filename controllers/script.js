@@ -632,33 +632,50 @@ const deleteFile = (filePath, ms) => {
 /**
  * CORRECT ARCO SALARY
  */
-
-const getArcoCellsValue = (ws) => {
+// 25 - 1907
+const getArcoCellsValue = (ws, lastIndex) => {
     const XLSX = require('xlsx');
     var range = XLSX.utils.decode_range(ws['!ref']);
     var data = {};
     // rows
     for (let rowNum = 24; rowNum <= range.e.r; rowNum++) {
         // cells
-        for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
-            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
-            let cell = ws[cellName];
-            if (cell) {
-                let newCell = cellName.substring(0, 1) + (cellName.substring(1, cellName.length) - 23);
-                data[newCell] = cell;
+        if (typeof ws['A'+rowNum] === 'object' && ws['A'+rowNum].w !== undefined) {
+            for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+                let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+                let cell = ws[cellName];
+                if (cell) {
+                    let newCell = cellName.substring(0, 1) + parseInt((cellName.substring(1, cellName.length) - 23 + lastIndex));
+                    data[newCell] = cell;
+                }
             }
         }
     }
     return data;
 }
 
+
 const copyAndPasteARCO = (data, wb) => {
-    const XLSX = require('xlsx');
-    var newWorkbook = wb;
+    var newWorkbook = setFormula(wb);
     let ws = newWorkbook.Sheets[newWorkbook.SheetNames[0]];
     Object.keys(data).forEach(key => {ws[key] = data[key];});
 
-    return setFormula(newWorkbook);
+    // const XLSX = require('xlsx');
+    // var range = XLSX.utils.decode_range(ws['!ref']);
+    // data1 = getARCOValidationFiltered(ws);
+    // let v = getTotalValidationARCO(data1, 'M-KTN');
+    // for (let rowNum = 24; rowNum <= range.e.r; rowNum++) {
+    //     let cell = ws['I'+rowNum];
+    //     if (typeof cell === 'object') {
+    //         let v = getTotalValidationARCO(data, cell.w || '');
+    //         if (v) {
+    //             ws['D'+rowNum].v = v.v1Total;
+    //             ws['D'+rowNum].w = new String(v.v1Total);
+    //         } 
+    //     }
+    // }
+
+    return newWorkbook;
 }
 
 const setFormula = (wb) => {
