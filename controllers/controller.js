@@ -1088,7 +1088,12 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                     message: 'No data found in the ARCO Report file number ' + (i + 1) + '.'
                                 });
                             } else {
-                                Object.assign(Data, data);
+
+                                // save file
+                                let output = await script.combineStyle2(script.copyAndPasteARCO(data, wbo_sheet), wbo_sheet_style);
+                                // save file
+                                await script.saveFile(output, OPFilePath);
+                                // Object.assign(Data, data);
                                 // set last index
                                 let cellName = Object.keys(data)[Object.keys(data).length-1];
                                 lastIndex = parseInt(cellName.substring(1, cellName.length)); 
@@ -1104,11 +1109,6 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     }
                 }
             }
-
-            // save file
-            let output = await script.combineStyle2(script.copyAndPasteARCO(Data, wbo_sheet), wbo_sheet_style);
-            // save file
-            await script.saveFile(output, OPFilePath);
 
             // FINISHED check file
             if (fs.existsSync(OPFilePath)) {
