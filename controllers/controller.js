@@ -9,6 +9,7 @@ const SCSchema = require('../models/SCSchema');
 const NotifSchema = require('../models/NotifSchema');
 const nodemailer = require('nodemailer');
 const moment = require('moment');
+var currentFile = null;
 //Mailing
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -1047,8 +1048,7 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
             const OPFileName = await `${script.getDateNow().join(".")} ARCO SALARIES WORKING CORRECTED ${date.getTime()}.xlsx`;
             const OPFilePath = await `${DIR}/${OPFileName}`;
             // set file name in a session
-            req.session.currentFile = OPFileName;
-            console.log(req.session.currentFile);
+            currentFile = OPFileName;
             // warnigngs
             const Warnings = await [];
             // data from acro report
@@ -1169,12 +1169,11 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
 });
 
 router.route('/downloading').post(redirectLogin, checkType, async (req, res) => {
-    console.log(req.session.currentFile)
     res.send({
         status: true,
         icon: 'success',
         message: 'The file is proccessed successfully.',
-        file: req.session.currentFile,
+        file: currentFile,
     });
 });
 
