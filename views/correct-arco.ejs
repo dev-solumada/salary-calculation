@@ -265,15 +265,15 @@
                             link.setAttribute("style","display:none");
                             link.setAttribute("download",xhr.response.file);
                             document.body.appendChild(link);
+                            downloadingP.textContent = 'Downloading...';    
                             setTimeout(() => {       
-                                // hide loading gif and remove link.
-                                downloadingP.textContent = 'Downloading...';                                               //needed for firefox
+                                // hide loading gif and remove link.                                           //needed for firefox
                                 link.click();
                                 setInterval(() => {
-                                downloadingP.textContent = '';
+                                    downloadingP.textContent = '';
                                     link.remove();
                                 }, 3000);
-                            }, 15000);  
+                            }, 10000);  
                         } else {
                             swal({
                                 title: new String(xhr.response.icon).toUpperCase(),
