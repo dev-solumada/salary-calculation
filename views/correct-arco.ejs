@@ -267,7 +267,7 @@
         function getFile(url) {
             const xhr2 = new XMLHttpRequest();
             xhr2.responseType = 'json';
-            xhr.onload = () => {
+            xhr2.onload = () => {
                 if (xhr.readyState === 4) {
                     if (xhr.response === null) {
                         alert('Error')
@@ -296,8 +296,8 @@
                     }
                 }
             };
-            xhr.open('POST', url);
-            xhr.send(null);
+            xhr2.open('POST', url);
+            xhr2.send(null);
         }
 
         function addARCOField(btn) {
