@@ -1048,6 +1048,7 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
             const OPFilePath = await `${DIR}/${OPFileName}`;
             // set file name in a session
             req.session.currentFile = OPFileName;
+            console.log(req.session.currentFile);
             // warnigngs
             const Warnings = await [];
             // data from acro report
@@ -1168,12 +1169,13 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
 });
 
 router.route('/downloading').post(redirectLogin, checkType, async (req, res) => {
+    console.log(req.session.currentFile)
     res.send({
         status: true,
         icon: 'success',
         message: 'The file is proccessed successfully.',
         file: req.session.currentFile,
-        warnings: []
+        warnings: Warnings
     });
 });
 
