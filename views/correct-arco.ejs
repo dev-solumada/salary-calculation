@@ -212,7 +212,7 @@
                     if (xhr.response === null) {
                         downloadBtn.disabled = false;
                         loadingGif.style.opacity = '0';
-                        downloadingP.textContent = '';
+                        downloadingP.textContent = 'Downloading...';
                         getFile('/downloading');
                     } else {
                         if (xhr.response.status) {
@@ -268,15 +268,16 @@
             const xhr2 = new XMLHttpRequest();
             xhr2.responseType = 'json';
             xhr2.onload = () => {
-                if (xhr.readyState === 4) {
-                    if (xhr.response === null) {
+                if (xhr2.readyState === 4) {
+                     downloadingP.textContent = '';
+                    if (xhr2.response === null) {
                         alert('Error')
                     } else {
-                        if (xhr.response.status) {
+                        if (xhr2.response.status) {
                             var link = document.createElement("A");
-                            link.setAttribute("href", '/' + xhr.response.file);
+                            link.setAttribute("href", '/' + xhr2.response.file);
                             link.setAttribute("style","display:none");
-                            link.setAttribute("download",xhr.response.file);
+                            link.setAttribute("download",xhr2.response.file);
                             document.body.appendChild(link);                                                        //needed for firefox
                             link.click();
                             // hide loading gif and remove link.
@@ -285,13 +286,6 @@
                             downloadingP.textContent = '';
                                 link.remove();
                             }, 3000);
-                        } else {
-                            swal({
-                                title: new String(xhr.response.icon).toUpperCase(),
-                                text: xhr.response.message,
-                                icon: xhr.response.icon,
-                                type: 'error',
-                            })
                         }
                     }
                 }
