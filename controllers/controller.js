@@ -1047,7 +1047,7 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
             const OPFileName = await `${script.getDateNow().join(".")} ARCO SALARIES WORKING CORRECTED ${date.getTime()}.xlsx`;
             const OPFilePath = await `${DIR}/${OPFileName}`;
             // set file name in a session
-            req.session.userid.currentFile = OPFileName;
+            req.session.currentFile = OPFileName;
             // warnigngs
             const Warnings = await [];
             // data from acro report
@@ -1169,8 +1169,8 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
 });
 
 router.route('/downloading').get(redirectLogin, checkType, async (req, res) => {
-    if (req.session.userid.currentFile)
-        res.redirect('/' + req.session.userid.currentFile);
+    if (req.session.currentFile)
+        res.redirect('/' + req.session.currentFile);
     else {
         backURL=req.header('Referer') || '/';
         res.redirect(backURL);
