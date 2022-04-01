@@ -252,9 +252,6 @@
             xhr.responseType = 'json';
             xhr.onload = () => {
                 if (xhr.readyState === 4) {
-                    downloadBtn.disabled = false;
-                    loadingGif.style.opacity = '0';
-                    downloadingP.textContent = '';
 
                     if (xhr.response === null) {
                         alert('Error')
@@ -272,6 +269,9 @@
                                 setInterval(() => {
                                     downloadingP.textContent = '';
                                     link.remove();
+                                    downloadBtn.disabled = false;
+                                    loadingGif.style.opacity = '0';
+                                    downloadingP.textContent = '';
                                 }, 3000);
                             }, 10000);  
                         } else {
