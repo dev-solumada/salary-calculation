@@ -1149,7 +1149,6 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                         message: 'Unable to connect the database.'
                     });
                 });
-                return res.redirect('download/'+ OPFileName);
             } else {
                 //send response
                 await res.send({
