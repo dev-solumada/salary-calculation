@@ -9,7 +9,6 @@ const SCSchema = require('../models/SCSchema');
 const NotifSchema = require('../models/NotifSchema');
 const nodemailer = require('nodemailer');
 const moment = require('moment');
-
 //Mailing
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -26,7 +25,6 @@ const MongooOptions = {
     useUnifiedTopology: true,
     UseNewUrlParser: true,
 };
-
 
 const getAllUsers = async () => {
     let user = [];
@@ -79,7 +77,7 @@ const getNotifs = async () => {
             await NotifSchema.insertMany(notifs);
         }
         notifs.forEach(n => {
-            if (n.category === 'salary calculation') {
+            if (n.category === 'salary calculation' || n.category === 'correct arco') {
                 n.file = n.link;
                 n.exists = true;
                 if (!fs.existsSync('uploads/'+n.link)) {
@@ -130,6 +128,7 @@ router.route('').get((req, res) => {
 // LOGOUT
 router.route('/logout').get(redirectLogin, (req, res) => {
     req.session.destroy();
+    
     return res.redirect('/login');
 });
 
@@ -996,7 +995,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
 /**
  * UPLOAD - ARCO FILE
  */
- router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => { 
+router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => { 
     try {
         if(!req.files) {
             return res.send({
@@ -1047,6 +1046,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             let date = new Date();
             const OPFileName = await `${script.getDateNow().join(".")} ARCO SALARIES WORKING CORRECTED ${date.getTime()}.xlsx`;
             const OPFilePath = await `${DIR}/${OPFileName}`;
+            // set file name in a session
+            req.session.userid.currentFile = OPFileName;
             // warnigngs
             const Warnings = await [];
             // data from acro report
@@ -1110,10 +1111,6 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
 
             // FINISHED check file
             if (fs.existsSync(OPFilePath)) {
-                // set timeout for the output file
-                await setTimeout(() => {
-                    fs.unlinkSync(OPFilePath);
-                }, 1000 * 60 * 60);
                 //send response
                 await res.send({
                     status: true,
@@ -1122,6 +1119,10 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     file: OPFileName,
                     warnings: Warnings
                 });
+                // set timeout for the output file
+                await setTimeout(() => {
+                    fs.unlinkSync(OPFilePath);
+                }, 1000 * 60 * 60);
                 console.log('vita');
                 // save info to database
                 mongoose.connect(
@@ -1131,19 +1132,6 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         UseNewUrlParser: true,
                     }
                 ).then(async () => {
-                    let info = await SCSchema.find();
-                    if (info[0]) {
-                        info[0].number += 1;
-                        info[0].creation = new Date();
-                        await SCSchema.findOneAndUpdate({name: 'info'}, info[0])
-                    } else {
-                        let newinfo = {
-                            name: 'info',
-                            number: 1
-                        }
-                        await new SCSchema(newinfo).save();
-                    }
-                    
                     // set notif
                     let notif = {
                         category: 'correct arco',
@@ -1161,6 +1149,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         message: 'Unable to connect the database.'
                     });
                 });
+                return res.redirect('download/'+ OPFileName);
             } else {
                 //send response
                 await res.send({
@@ -1179,7 +1168,17 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
     }
 });
 
+router.route('/downloading').get(redirectLogin, checkType, async (req, res) => {
+    if (req.session.userid.currentFile)
+        res.redirect('/' + req.session.userid.currentFile);
+    else {
+        backURL=req.header('Referer') || '/';
+        res.redirect(backURL);
+    }
+});
+
 router.route('/correct-arco').get(redirectLogin, checkType, async (req, res) => {
+    
     const user = req.session.userId;
     mongoose.connect(
         process.env.MONGO_URI,
