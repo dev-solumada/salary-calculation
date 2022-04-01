@@ -9,7 +9,7 @@ const SCSchema = require('../models/SCSchema');
 const NotifSchema = require('../models/NotifSchema');
 const nodemailer = require('nodemailer');
 const moment = require('moment');
-var currentFile = null;
+var currentFile = null, finished = false;
 //Mailing
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -935,6 +935,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     file: OPFileName,
                     warnings: Warnings
                 });
+                finished = true;
                 // save info to database
                 mongoose.connect(
                     process.env.MONGO_URI,
@@ -1170,7 +1171,8 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
 
 router.route('/downloading').post(redirectLogin, checkType, async (req, res) => {
     while (true) {
-        if (fs.existsSync('uploads/'+currentFile)) {
+        if (finished) {
+            finished = false;
             res.send({
                 status: true,
                 icon: 'success',
