@@ -33,18 +33,48 @@
                                         <i class="ti-file btn-icon-prepend"></i>
                                         Upload file
                                     </button>
-                                    <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
+                                    <!-- <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
                                         <i class="ti-trash"></i>
-                                    </button>
+                                    </button> -->
                                 </div>
                                 <select class="form-control mt-1" style="display: none;" id="arco-report-sheetname">
                                 </select>
                             </div>
                             <div class="form-group">
+                                <input type="file" name="arco-report" id="arco-report-1" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-1')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                    <!-- <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
+                                        <i class="ti-trash"></i>
+                                    </button> -->
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="arco-report-sheetname">
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <input type="file" name="arco-report" id="arco-report-2" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-2')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                    <!-- <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
+                                        <i class="ti-trash"></i>
+                                    </button> -->
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="arco-report-sheetname">
+                                </select>
+                            </div>
+                            <!-- <div class="form-group">
                                 <button class="btn btn-info text-white" type="button" onclick="addARCOField(this)">
                                     <i class="ti-plus"></i> New field
                                 </button>
-                            </div>
+                            </div> -->
                         </div>
                     </div>
                 </div>
@@ -142,7 +172,7 @@
                         e.target.nextElementSibling.firstElementChild.value = '';
                     }
                     let select = btn.parentElement.nextElementSibling;
-                        select.style.display = 'none';
+                        // select.style.display = 'none';
                 });
             }
         }
