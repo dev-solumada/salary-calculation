@@ -191,7 +191,7 @@
             const xhr = new XMLHttpRequest();
             xhr.responseType = 'json';
 
-            xhr.timeout = 1000 * 60 * 5; // time in milliseconds
+            xhr.timeout = 1000 * 60 * 60; // time in milliseconds
 
             xhr.ontimeout = function (e) {
                 // XMLHttpRequest timed out. Do something here.
