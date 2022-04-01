@@ -1171,10 +1171,9 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
 router.route('/downloading').get(redirectLogin, checkType, async (req, res) => {
     if (req.session.currentFile)
         res.redirect('/' + req.session.currentFile);
-    else {
+        
         backURL=req.header('Referer') || '/';
         res.redirect(backURL);
-    }
 });
 
 router.route('/correct-arco').get(redirectLogin, checkType, async (req, res) => {
