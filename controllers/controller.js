@@ -1173,7 +1173,7 @@ router.route('/downloading').post(redirectLogin, checkType, async (req, res) => 
         icon: 'success',
         message: 'The file is proccessed successfully.',
         file: req.session.currentFile,
-        warnings: Warnings
+        warnings: []
     });
 });
 
