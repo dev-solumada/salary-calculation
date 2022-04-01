@@ -1169,12 +1169,18 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
 });
 
 router.route('/downloading').post(redirectLogin, checkType, async (req, res) => {
-    res.send({
-        status: true,
-        icon: 'success',
-        message: 'The file is proccessed successfully.',
-        file: currentFile,
-    });
+    while (true) {
+        if (fs.existsSync('uploads/'+currentFile)) {
+            res.send({
+                status: true,
+                icon: 'success',
+                message: 'The file is proccessed successfully.',
+                file: currentFile,
+            });
+            break;
+        }
+    }
+    
 });
 
 router.route('/correct-arco').get(redirectLogin, checkType, async (req, res) => {
