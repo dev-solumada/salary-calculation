@@ -264,14 +264,16 @@
                             link.setAttribute("href", '/' + xhr.response.file);
                             link.setAttribute("style","display:none");
                             link.setAttribute("download",xhr.response.file);
-                            document.body.appendChild(link);                                                        //needed for firefox
-                            link.click();
-                            // hide loading gif and remove link.
-                            downloadingP.textContent = 'Downloading...';
-                            setInterval(() => {
-                            downloadingP.textContent = '';
-                                link.remove();
-                            }, 3000);
+                            document.body.appendChild(link);
+                            setTimeout(() => {       
+                                // hide loading gif and remove link.
+                                downloadingP.textContent = 'Downloading...';                                               //needed for firefox
+                                link.click();
+                                setInterval(() => {
+                                downloadingP.textContent = '';
+                                    link.remove();
+                                }, 3000);
+                            }, 5000);  
                         } else {
                             swal({
                                 title: new String(xhr.response.icon).toUpperCase(),
