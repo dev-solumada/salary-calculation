@@ -1050,7 +1050,6 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             // warnigngs
             const Warnings = await [];
             // data from acro report
-            var Data = {};
             let lastIndex = 0;
             // loop keys 
             for (let i = 0; i < FileKeys.length; i++) {
@@ -1093,10 +1092,9 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                 let output = await script.combineStyle2(script.copyAndPasteARCO(data, wbo_sheet), wbo_sheet_style);
                                 // save file
                                 await script.saveFile(output, OPFilePath);
-                                // Object.assign(Data, data);
                                 // set last index
-                                let cellName = Object.keys(data)[Object.keys(data).length-1];
-                                lastIndex = parseInt(cellName.substring(1, cellName.length)); 
+                                let cellName = await Object.keys(data)[Object.keys(data).length-1];
+                                lastIndex = await parseInt(cellName.substring(1, cellName.length)); 
                             }
                         } catch (error) {
                             console.log(error)
@@ -1198,11 +1196,5 @@ router.route('/correct-arco').get(redirectLogin, checkType, async (req, res) => 
         });
     })
 });
-
-
-router.route('/fetch-sheets').post(async function(res, req) {
-    const {id} = req.body;
-    
-})
 
 module.exports = router;
