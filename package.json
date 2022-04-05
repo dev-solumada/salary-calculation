@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "script.js",
   "scripts": {
-    "start": "nodemon app.js",
+    "start": "nodemon --max-old-space-size=4096 app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -23,6 +23,7 @@
     "nodemailer": "^6.7.2",
     "nodemon": "^2.0.15",
     "sheetjs-style": "^0.15.8",
+    "socket.io": "^4.4.1",
     "xlsx": "^0.18.2",
     "xlsx-style": "^0.8.13"
   },
