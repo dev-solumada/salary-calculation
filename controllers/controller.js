@@ -676,7 +676,6 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
     const io = req.app.get("io");
     io.on('connection', s => {
         socket = s;
-        socket.emit('action', 'Hello');
     });
     const user = req.session.userId;
     // notifications
