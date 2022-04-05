@@ -41,6 +41,36 @@
                                 </select>
                             </div>
                             <div class="form-group">
+                                <input type="file" name="arco-report" id="arco-report-1" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-1')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                    <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
+                                        <i class="ti-trash"></i>
+                                    </button>
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="arco-report-sheetname">
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <input type="file" name="arco-report" id="arco-report-2" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-2')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                    <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
+                                        <i class="ti-trash"></i>
+                                    </button>
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="arco-report-sheetname">
+                                </select>
+                            </div>
+                            <div class="form-group">
                                 <button class="btn btn-info text-white" type="button" onclick="addARCOField(this)">
                                     <i class="ti-plus"></i> New field
                                 </button>
@@ -104,6 +134,58 @@
     </div>
     <script src="/js/sweetalert.min.js"></script>
     <script src="/js/exceljs.min.js"></script>
+    <script src="../node_modules/socket.io/client-dist/socket.io.js"></script>
+    <script>
+        var socket = io.connect();
+        socket.on('connection');
+        // ACTION
+        socket.on('action', message => {
+            console.log(message);
+            downloadingP.textContent = message;
+        });
+
+        // ERROR
+        socket.on('error', data => {
+            swal({
+                title: new String(data.icon).toUpperCase(),
+                text: data.message,
+                icon: data.icon,
+            });
+
+            document.getElementById('warning-field').innerHTML = '';
+            // show warning
+            if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+                warnings.style.display = 'block';
+                data.warnings.forEach((warn, index) => {
+                document.getElementById('warning-field').innerHTML += `
+                <tr class="table-${warn.icon}">
+                        <td>Warning: ${warn.message}</td>
+                    </tr>`; 
+                });
+            }
+            downloadBtn.disabled = false;
+            loadingGif.style.opacity = '0';
+            downloadingP.textContent = '';
+        });
+        
+        // DOWNLOAD
+        socket.on('download', data => {
+            var link = document.createElement("A");
+            link.setAttribute("href", '/' + data.file);
+            link.setAttribute("style","display:none");
+            link.setAttribute("download",data.file);
+            document.body.appendChild(link);                                                        //needed for firefox
+            link.click();
+            // hide loading gif and remove link.
+            // downloadingP.textContent = 'Downloading...';
+            setTimeout(() => {
+                downloadingP.textContent = '';
+                downloadBtn.disabled = false;
+                loadingGif.style.opacity = '0';
+                link.remove();
+            }, 3000);
+        });
+    </script>
     <script>
         let downloadBtn = document.getElementById('download');
         let loadingGif = document.getElementById('loading-gif');
@@ -133,6 +215,7 @@
                             document.getElementById(id).value = null;
                             document.getElementById(id).files = null;
                             btn.parentElement.firstElementChild.value = '';
+                            if (btn.parentElement.nextElementSibling)
                             btn.parentElement.nextElementSibling.style.display = 'none';
                         });
                         btn.before(btnR);
@@ -142,12 +225,13 @@
                         e.target.nextElementSibling.firstElementChild.value = '';
                     }
                     let select = btn.parentElement.nextElementSibling;
-                        select.style.display = 'none';
+                        // select.style.display = 'none';
                 });
             }
         }
 
         document.forms[0].addEventListener('submit', (e) => {
+            
             e.preventDefault();
             let formData = new FormData();
             let inputFiles = document.querySelectorAll('.arco-report');
@@ -161,60 +245,14 @@
             const xhr = new XMLHttpRequest();
             xhr.responseType = 'json';
 
-            xhr.timeout = 1000 * 60 * 5; // time in milliseconds
-
-            xhr.ontimeout = function (e) {
-                // XMLHttpRequest timed out. Do something here.
-                swal({
-                    title: 'ERROR',
-                    text: 'Request timeout. Please check your connection!',
-                    icon: 'error',
-                    type: 'error',
-                }).then(e => {
-                    downloadBtn.disabled = false;
-                    loadingGif.style.opacity = '0';
-                    downloadingP.textContent = '';
-                });
-            };
             // log response
             xhr.onload = () => {
                 if (xhr.readyState === 4) {
-                    if (xhr.response.status) {
-                        var link = document.createElement("A");
-                        link.setAttribute("href", '/' + xhr.response.file);
-                        link.setAttribute("style","display:none");
-                        link.setAttribute("download",xhr.response.file);
-                        document.body.appendChild(link);                                                        //needed for firefox
-                        link.click();
-                        // hide loading gif and remove link.
-                        downloadingP.textContent = 'Downloading...';
-                        setInterval(() => {
-                        downloadingP.textContent = '';
-                            link.remove();
-                        }, 3000);
-                    } else {
-                        swal({
-                            title: new String(xhr.response.icon).toUpperCase(),
-                            text: xhr.response.message,
-                            icon: xhr.response.icon,
-                            type: 'error',
-                        })
+                    if (xhr.response) {
+                        if (xhr.response.status) {
+                        } else {
+                        }
                     }
-                    document.getElementById('warning-field').innerHTML = '';
-
-                    // show warning
-                    if (Array.isArray(xhr.response.warnings) && xhr.response.warnings.length > 0) {
-                        warnings.style.display = 'block';
-                        xhr.response.warnings.forEach((warn, index) => {
-                        document.getElementById('warning-field').innerHTML += `
-                        <tr class="table-${warn.icon}">
-                                <td>Warning: ${warn.message}</td>
-                            </tr>`; 
-                        });
-                    }
-                    downloadBtn.disabled = false;
-                    loadingGif.style.opacity = '0';
-                    downloadingP.textContent = '';
                 }
             };
 

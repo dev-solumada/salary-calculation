@@ -9,7 +9,8 @@ const SCSchema = require('../models/SCSchema');
 const NotifSchema = require('../models/NotifSchema');
 const nodemailer = require('nodemailer');
 const moment = require('moment');
-
+const { emit } = require('process');
+var socket = null;
 //Mailing
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -26,7 +27,6 @@ const MongooOptions = {
     useUnifiedTopology: true,
     UseNewUrlParser: true,
 };
-
 
 const getAllUsers = async () => {
     let user = [];
@@ -79,7 +79,7 @@ const getNotifs = async () => {
             await NotifSchema.insertMany(notifs);
         }
         notifs.forEach(n => {
-            if (n.category === 'salary calculation') {
+            if (n.category === 'salary calculation' || n.category === 'correct arco') {
                 n.file = n.link;
                 n.exists = true;
                 if (!fs.existsSync('uploads/'+n.link)) {
@@ -130,6 +130,7 @@ router.route('').get((req, res) => {
 // LOGOUT
 router.route('/logout').get(redirectLogin, (req, res) => {
     req.session.destroy();
+    
     return res.redirect('/login');
 });
 
@@ -357,16 +358,6 @@ router.route('/home').get(redirectLogin, async (req, res) => {
         csInfoActivity: csInfoActivity,
         notifs: notifs
     });
-});
-
-/**
- * PROGRAMME - Salary Calculation.
- */
-router.route('/salary-calculation').get(redirectLogin, async (req, res) => {
-    const user = req.session.userId;
-    // notifications
-    let notifs = await getNotifs();
-    res.render('salary-calculation', {login: false, active: 'programmes', active_sub: 'salary-calculation', year: new Date().getFullYear(), user: user, notifs: notifs});
 });
 
 /**
@@ -679,17 +670,35 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
 
 
 /**
+ * PROGRAMME - Salary Calculation.
+ */
+ router.route('/salary-calculation').get(redirectLogin, async (req, res) => {
+    const io = req.app.get("io");
+    io.on('connection', s => {
+        socket = s;
+        socket.emit('action', 'Hello');
+    });
+    const user = req.session.userId;
+    // notifications
+    let notifs = await getNotifs();
+    res.render('salary-calculation', {login: false, active: 'programmes', active_sub: 'salary-calculation', year: new Date().getFullYear(), user: user, notifs: notifs});
+});
+
+/**
  * UPLOAD - RH file and Salary Sheet file.
  */
  router.route('/upload-xlsx').post(redirectLogin, async (req, res) => { 
     try {
         if(!req.files) {
-            return res.send({
+            return socket.emit('error', {
                 status: false,
                 icon: 'warning',
                 message: 'No files uploaded!'
             });
         } else {
+            /* socket */
+            await socket.emit('action', 'Starting data extraction...');
+            console.log('emmitted')
             // file directory
             const DIR = await 'uploads';
             // verifier le repertoire
@@ -705,7 +714,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             // check files
             // NO Sheet file selected
             if (!GSSFile) {
-                return res.send({
+                return socket.emit('error', {
                     status: false,
                     icon: 'warning',
                     message: 'No GLOBAL SALARY Sheet file uploaded!'
@@ -713,7 +722,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             }
             // No file that contains all data selected
             if (FileKeys.length === 1) {
-                return res.send({
+                return socket.emit('error', {
                     status: false,
                     icon: 'warning',
                     message: 'No file that contains data uploaded!'
@@ -725,13 +734,18 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             const GSSPATH = await `${DIR}/${GSSFile.name.split('.xlsx')[0]}_${time}.xlsx`;
             // COPY GSS FILE
             await GSSFile.mv(GSSPATH);
+            /* socket */
+            await socket.emit('action', 'Cloning: ' + GSSFile.name);
             // read sheet output file
             var wbo_sheet = await script.readWBxlsx(GSSPATH);
             var wbo_sheet_style = await script.readWBxlsxstyle(GSSPATH);
             // create the output file name
             let date = new Date();
+            
             const OPFileName = await `${script.getDateNow().join(".")} GSS ${date.getTime()}.xlsx`;
             const OPFilePath = await `${DIR}/${OPFileName}`;
+            /* socket */
+            await socket.emit('action', 'Creating output filename as: ' + OPFileName);
             // warnigngs
             const Warnings = await [];
             // step
@@ -742,6 +756,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 // get file
                 let file = await FILES[key];
                 let filePath = await `${DIR}/${file.name.split('.xlsx')[0]}_${time}.xlsx`;
+                /* socket */
+                await socket.emit('action', 'Copying and Reading: ' + file.name);
                 // move file
                 await file.mv(filePath);
                 // set file timeout to delete
@@ -764,6 +780,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                             });
                         } else {
                             try {
+                                /* socket */
+                                await socket.emit('action', 'Fetching all data from: ' + file.name);
                                 // fetch all data required
                                 var data = await script.fetchData(ws);
                                 // if data is empty
@@ -774,6 +792,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                         message: 'No data found in the RH file.'
                                     });
                                 } else {
+                                    /* socket */
+                                    await socket.emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // output file
                                     let output = await script.createOutput(data, wbo_sheet, wbo_sheet_style);
                                     if (output.agent_found === 0) {
@@ -804,7 +824,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     // UNIFIED POST
                     case 'salaryup_file':
                         var sheetName = 'UnifiedPost Salaris per agent';
-                        var sheetIndex = script.getSheetIndex(wbi, sheetName);
+                        var sheetIndex = 1;//script.getSheetIndex(wbi, sheetName);
                         ws = await script.getWS(wbi, sheetIndex);
                         if (!ws) {
                             Warnings.push({
@@ -814,6 +834,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                             });
                         } else {
                             try {
+                                /* socket */
+                                await socket.emit('action', 'Fetching all data from: ' + file.name);
                                 data = await script.getSalaryUPData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
@@ -823,6 +845,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                         message: 'No data found in the UP Salary file! Please verify it.'
                                     });
                                 } else {
+                                    /* socket */
+                                    await socket.emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
                                     if (step !== 0)
                                         wbo_sheet = await script.readWBxlsx(OPFilePath);
@@ -852,6 +876,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                             });
                         } else {
                             try {
+                                /* socket */
+                                await socket.emit('action', 'Fetching all data from: ' + file.name);
                                 data = await script.getSalaryAgroboxData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
@@ -861,6 +887,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                         message: 'No data found in the Agrobox Salary file! Please verify it.'
                                     });
                                 } else {
+                                    /* socket */
+                                    await socket.emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
                                     if (step !== 0)
                                         wbo_sheet = await script.readWBxlsx(OPFilePath);
@@ -881,7 +909,6 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         var sheetName = 'Summary';
                         var sheetIndex = script.getSheetIndex(wbi, sheetName);
                         ws = await script.getWS(wbi, 1);
-
                         if (!ws) {
                             Warnings.push({
                                 status: false,
@@ -890,6 +917,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                             });
                         } else {
                             try {
+                                /* socket */
+                                await socket.emit('action', 'Fetching all data in: ' + file.name);
                                 data = await script.getSalaryArcoData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
@@ -899,6 +928,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                         message: 'No data found in the Arco Salary file! Please verify it.'
                                     });
                                 } else {
+                                    /* socket */
+                                    await socket.emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
                                     if (step !== 0)
                                         wbo_sheet = await script.readWBxlsx(OPFilePath);
@@ -921,20 +952,24 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 }
             }
 
+            /* socket */
+            await socket.emit('action', 'Finishing Data Extraction...');
             // FINISHED check file
             if (step > 0 && fs.existsSync(OPFilePath)) {
                 // set timeout for the output file
                 await setTimeout(() => {
                     fs.unlinkSync(OPFilePath);
                 }, 1000 * 60 * 60);
+                
                 //send response
-                await res.send({
+                await socket.emit('download', {
                     status: true,
                     icon: 'success',
                     message: 'The file is proccessed successfully.',
                     file: OPFileName,
                     warnings: Warnings
                 });
+                finished = true;
                 // save info to database
                 mongoose.connect(
                     process.env.MONGO_URI,
@@ -967,7 +1002,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     await new NotifSchema(notif).save();
                     
                 }).catch(err => {
-                    res.send({
+                    socket.emit('error', {
                         target: 'database',
                         status: false,
                         message: 'Unable to connect the database.'
@@ -975,7 +1010,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 });
             } else {
                 //send response
-                await res.send({
+                socket.emit('error', {
                     status: false,
                     icon: 'warning',
                     message: 'Can not perform the program.',
@@ -996,10 +1031,10 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
 /**
  * UPLOAD - ARCO FILE
  */
- router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => { 
+router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
     try {
         if(!req.files) {
-            return res.send({
+            return socket.emit('error', {
                 status: false,
                 icon: 'warning',
                 message: 'No files uploaded!'
@@ -1014,13 +1049,13 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             // files
             const FILES = req.files;
             // file keys
-            const FileKeys = await Object.keys(FILES);
+            var FileKeys = await Object.keys(FILES);
             // get the global salary sheet
             const ARCOFile = await req.files['arco_salary'];
             // check files
             // NO Sheet file selected
             if (!ARCOFile) {
-                return res.send({
+                return socket.emit('error', {
                     status: false,
                     icon: 'warning',
                     message: 'No ARCO Salary file uploaded!'
@@ -1028,45 +1063,61 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             }
             // No file that contains all data selected
             if (FileKeys.length === 1) {
-                return res.send({
+                return socket.emit('error', {
                     status: false,
                     icon: 'warning',
                     message: 'No ARCO Report file uploaded!'
                 });
             } 
+            
+            /* socket */
+            await socket.emit('action', 'Starting correction...');
             // time to file
             const time = new Date().getTime();
             // gs path
             const ARCOPath = await `${DIR}/${ARCOFile.name.split('.xlsx')[0]}_${time}.xlsx`;
+            /* socket */
+            socket.emit('action', 'Cloning: ' + ARCOFile.name);
             // COPY GSS FILE
             await ARCOFile.mv(ARCOPath);
             // read sheet output file
             var wbo_sheet = await script.readWBxlsx(ARCOPath);
             var wbo_sheet_style = await script.readWBxlsxstyle(ARCOPath);
+            await script.deleteFile(ARCOPath, 5000);
             // create the output file name
             let date = new Date();
             const OPFileName = await `${script.getDateNow().join(".")} ARCO SALARIES WORKING CORRECTED ${date.getTime()}.xlsx`;
             const OPFilePath = await `${DIR}/${OPFileName}`;
+            // set file name in a session
+            currentFile = OPFileName;
             // warnigngs
             const Warnings = await [];
             // data from acro report
-            var Data = {};
             let lastIndex = 0;
             // loop keys 
+            FileKeys.splice(FileKeys.indexOf('arco_salary'), 1);
+            /* socket */
+            await socket.emit('action', 'Looping through the arco report files ');
             for (let i = 0; i < FileKeys.length; i++) {
                 let key = FileKeys[i];
-                // get file
-                let file = await FILES[key];
-                let filePath = await `${DIR}/${file.name.split('.xlsx')[0]}_${time}.xlsx`;
-                // move file
-                await file.mv(filePath);
-                // set file timeout to delete
-                await script.deleteFile(filePath, 30000);
-                // read excel file
-                var wbi = await script.readWBxlsxstyle(filePath);
                 // switch key file
                 if (key.includes('arco_report')) {
-                    var sheetIndex = 0 ; //script.getSheetIndex(wbi, sheetName);
+                    // get file
+                    let file = await FILES[key];
+                    let filePath = await `${DIR}/${file.name.split('.xlsx')[0]}_${time}.xlsx`;
+                    /* socket */
+                    await socket.emit('action', 'Copying: ' + (file.name));
+                    console.log('emitted')
+                    // move file
+                    await file.mv(filePath);
+                    // read excel file
+                    var wbi = await script.readWBxlsxstyle(filePath);
+                    // set file timeout to delete
+                    await script.deleteFile(filePath, 5000);
+                    var sheetIndex = 0 ;
+                    /* socket */
+                    socket.emit('action', 'Extracting data in: ' + (file.name));
+                    console.log('emitted')
                     //.get work sheet rh
                     var ws = await script.getWS(wbi, sheetIndex);
                     // check sheets
@@ -1088,10 +1139,16 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                     message: 'No data found in the ARCO Report file number ' + (i + 1) + '.'
                                 });
                             } else {
-                                Object.assign(Data, data);
+                                /* socket */
+                                await socket.emit('action', 'Writing all data into: ' + OPFileName);
+                                console.log('emitted')
+                                // save file
+                                let output = await script.combineStyle2(script.copyAndPasteARCO(data, wbo_sheet), wbo_sheet_style);
+                                // save file
+                                await script.saveFile(output, OPFilePath);
                                 // set last index
-                                let cellName = Object.keys(data)[Object.keys(data).length-1];
-                                lastIndex = parseInt(cellName.substring(1, cellName.length)); 
+                                let cellName = await Object.keys(data)[Object.keys(data).length-1];
+                                lastIndex = await parseInt(cellName.substring(1, cellName.length)); 
                             }
                         } catch (error) {
                             console.log(error)
@@ -1104,27 +1161,25 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     }
                 }
             }
-
-            // save file
-            let output = await script.combineStyle2(script.copyAndPasteARCO(Data, wbo_sheet), wbo_sheet_style);
-            // save file
-            await script.saveFile(output, OPFilePath);
-
+            /* socket */
+            await  socket.emit('action', 'Finishing data extraction...');
+            console.log('emitted')
             // FINISHED check file
             if (fs.existsSync(OPFilePath)) {
                 // set timeout for the output file
                 await setTimeout(() => {
                     fs.unlinkSync(OPFilePath);
                 }, 1000 * 60 * 60);
-                //send response
-                await res.send({
+                
+                /* socket */
+                await socket.emit('download', {
                     status: true,
                     icon: 'success',
                     message: 'The file is proccessed successfully.',
                     file: OPFileName,
                     warnings: Warnings
                 });
-                console.log('vita');
+                console.log('download')
                 // save info to database
                 mongoose.connect(
                     process.env.MONGO_URI,
@@ -1133,19 +1188,6 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         UseNewUrlParser: true,
                     }
                 ).then(async () => {
-                    let info = await SCSchema.find();
-                    if (info[0]) {
-                        info[0].number += 1;
-                        info[0].creation = new Date();
-                        await SCSchema.findOneAndUpdate({name: 'info'}, info[0])
-                    } else {
-                        let newinfo = {
-                            name: 'info',
-                            number: 1
-                        }
-                        await new SCSchema(newinfo).save();
-                    }
-                    
                     // set notif
                     let notif = {
                         category: 'correct arco',
@@ -1157,7 +1199,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     await new NotifSchema(notif).save();
                     
                 }).catch(err => {
-                    res.send({
+                    socket.emit('error', {
                         target: 'database',
                         status: false,
                         message: 'Unable to connect the database.'
@@ -1165,7 +1207,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 });
             } else {
                 //send response
-                await res.send({
+                socket.emit('error', {
                     status: false,
                     icon: 'warning',
                     message: 'Can not perform the program.',
@@ -1182,6 +1224,10 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
 });
 
 router.route('/correct-arco').get(redirectLogin, checkType, async (req, res) => {
+    const io = req.app.get("io");
+    io.on('connection', s => {
+        socket = s;
+    });
     const user = req.session.userId;
     mongoose.connect(
         process.env.MONGO_URI,
@@ -1189,7 +1235,7 @@ router.route('/correct-arco').get(redirectLogin, checkType, async (req, res) => 
     ).then(async () => {
         // notifications
         let notifs = await getNotifs();
-        return res.render('correct-arco', {login: false, active: 'programmes', active_sub: 'correct-arco', year: new Date().getFullYear(), user: user, notifs: notifs});
+        res.render('correct-arco', {login: false, active: 'programmes', active_sub: 'correct-arco', year: new Date().getFullYear(), user: user, notifs: notifs});
     }).catch(err => {
         res.send({
             target: 'database',
@@ -1198,11 +1244,5 @@ router.route('/correct-arco').get(redirectLogin, checkType, async (req, res) => 
         });
     })
 });
-
-
-router.route('/fetch-sheets').post(async function(res, req) {
-    const {id} = req.body;
-    
-})
 
 module.exports = router;

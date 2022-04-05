@@ -84,11 +84,17 @@
   <script src="/vendors/base/vendor.bundle.base.js"></script>
   <!-- endinject -->
   <!-- inject:js -->
-  <script src="/js/off-canvas.js"></script>
+  <script src="/js/off-canvas.js"></script> 
   <script src="/js/hoverable-collapse.js"></script>
   <script src="/js/template.js"></script>
   <script src="/js/todolist.js"></script>
   <script src="/js/sweetalert.min.js"></script>
+  <script src="../node_modules/socket.io/client-dist/socket.io.js"></script>
+  <script>
+      var socket = io();
+      socket.on('connection');
+
+  </script>
   <!-- endinject -->
   <script>
     let submitBtn = document.getElementById('submit');
