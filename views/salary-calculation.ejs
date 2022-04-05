@@ -277,6 +277,7 @@
 
         document.forms[0].addEventListener('submit', (e) => {
             e.preventDefault();
+            socket.on('connection');
             let file1 = document.getElementById('rapport-rh');
             let file2 = document.getElementById('salary-up');
             let file3 = document.getElementById('salary-agrobox');
