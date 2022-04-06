@@ -459,7 +459,7 @@ const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
         let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
         // chercher ou se situe le 2000 et 1000
         let colSalaryAgrobox = ''
-        if (i == 0) colSalaryAgrobox = 'D';
+        if (i == 0) colSalaryAgrobox = 'F';
         
         if (i == 2) colSalaryAgrobox = 'G';
         if (i == 3) colSalaryAgrobox = 'D';
