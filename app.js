@@ -82,9 +82,20 @@ app.use(expressUpload());
 app.use(expressLayouts)
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({ extended: true }));
+const server = require("http").createServer(app);
+const io = require("socket.io")(server);
+io.on('connection', socket => {
+  socket.on('server', mess => {
+    socket.emit('server', mess);
+    console.log(mess)
+  });
+  app.set("socket", socket);
+});
+app.set("io", io);
+
 app.use('/', router);
 
-const server = app.listen(PORT, () => {
+server.listen(PORT, () => {
   const port = server.address().port;
   console.log(`Express is working on port ${port}`);
 });

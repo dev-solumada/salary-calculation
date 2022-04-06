@@ -33,9 +33,9 @@
                                         <i class="ti-file btn-icon-prepend"></i>
                                         Upload file
                                     </button>
-                                    <!-- <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
+                                    <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
                                         <i class="ti-trash"></i>
-                                    </button> -->
+                                    </button>
                                 </div>
                                 <select class="form-control mt-1" style="display: none;" id="arco-report-sheetname">
                                 </select>
@@ -48,9 +48,9 @@
                                         <i class="ti-file btn-icon-prepend"></i>
                                         Upload file
                                     </button>
-                                    <!-- <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
+                                    <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
                                         <i class="ti-trash"></i>
-                                    </button> -->
+                                    </button>
                                 </div>
                                 <select class="form-control mt-1" style="display: none;" id="arco-report-sheetname">
                                 </select>
@@ -63,18 +63,18 @@
                                         <i class="ti-file btn-icon-prepend"></i>
                                         Upload file
                                     </button>
-                                    <!-- <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
+                                    <button class="btn btn-info text-white" type="button" onclick="deleteARCOField(this)">
                                         <i class="ti-trash"></i>
-                                    </button> -->
+                                    </button>
                                 </div>
                                 <select class="form-control mt-1" style="display: none;" id="arco-report-sheetname">
                                 </select>
                             </div>
-                            <!-- <div class="form-group">
+                            <div class="form-group">
                                 <button class="btn btn-info text-white" type="button" onclick="addARCOField(this)">
                                     <i class="ti-plus"></i> New field
                                 </button>
-                            </div> -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -134,7 +134,71 @@
     </div>
     <script src="/js/sweetalert.min.js"></script>
     <script src="/js/exceljs.min.js"></script>
+    <script src="../node_modules/socket.io/client-dist/socket.io.js"></script>
     <script>
+        var socket = io.connect('/');
+        socket.on('connect', () => {
+            // socket.on('connection');
+        });
+        socket.on("connect_error", () => {
+            setTimeout(() => {
+                socket.connect('/');
+            }, 1000);
+        });
+        var timerID = null;
+        // ACTION
+        socket.on('action', data => {
+            if (typeof data === 'object') {
+                if (timerID) clearInterval(timerID);
+                var link = document.createElement("A");
+                link.setAttribute("href", '/' + data.file);
+                link.setAttribute("style","display:none");
+                link.setAttribute("download",data.file);
+                document.body.appendChild(link);                                                        //needed for firefox
+                link.click();
+                // hide loading gif and remove link.
+                // downloadingP.textContent = 'Downloading...';
+                setTimeout(() => {
+                    downloadingP.textContent = '';
+                    downloadBtn.disabled = false;
+                    loadingGif.style.opacity = '0';
+                    link.remove();
+                }, 3000);
+            } else {
+                socket.emit('reply', data);
+                downloadingP.textContent = data;
+            }
+        });
+
+        // ERROR
+        socket.on('error', data => {
+            if (timerID) clearInterval(timerID);
+            swal({
+                title: new String(data.icon).toUpperCase(),
+                text: data.message,
+                icon: data.icon,
+            });
+
+            document.getElementById('warning-field').innerHTML = '';
+            // show warning
+            if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+                warnings.style.display = 'block';
+                data.warnings.forEach((warn, index) => {
+                document.getElementById('warning-field').innerHTML += `
+                <tr class="table-${warn.icon}">
+                        <td>Warning: ${warn.message}</td>
+                    </tr>`; 
+                });
+            }
+            downloadBtn.disabled = false;
+            loadingGif.style.opacity = '0';
+            downloadingP.textContent = '';
+        });
+        
+        // DOWNLOAD
+        socket.on('download', data => {
+        });
+        
         let downloadBtn = document.getElementById('download');
         let loadingGif = document.getElementById('loading-gif');
         let downloadingP = document.getElementById('downloading-p');
@@ -163,6 +227,7 @@
                             document.getElementById(id).value = null;
                             document.getElementById(id).files = null;
                             btn.parentElement.firstElementChild.value = '';
+                            if (btn.parentElement.nextElementSibling)
                             btn.parentElement.nextElementSibling.style.display = 'none';
                         });
                         btn.before(btnR);
@@ -194,46 +259,10 @@
             // log response
             xhr.onload = () => {
                 if (xhr.readyState === 4) {
-                    if (xhr.response === null) {
-                        downloadingP.textContent = 'Preparing the file...';
-                        getFile('/downloading');
-                    } else {
+                    if (xhr.response) {
                         if (xhr.response.status) {
-                            var link = document.createElement("A");
-                            link.setAttribute("href", '/' + xhr.response.file);
-                            link.setAttribute("style","display:none");
-                            link.setAttribute("download",xhr.response.file);
-                            document.body.appendChild(link);                                                        //needed for firefox
-                            link.click();
-                            // hide loading gif and remove link.
-                            downloadingP.textContent = 'Downloading...';
-                            setInterval(() => {
-                            downloadingP.textContent = '';
-                                link.remove();
-                            }, 3000);
                         } else {
-                            swal({
-                                title: new String(xhr.response.icon).toUpperCase(),
-                                text: xhr.response.message,
-                                icon: xhr.response.icon,
-                                type: 'error',
-                            })
                         }
-                        document.getElementById('warning-field').innerHTML = '';
-
-                        // show warning
-                        if (Array.isArray(xhr.response.warnings) && xhr.response.warnings.length > 0) {
-                            warnings.style.display = 'block';
-                            xhr.response.warnings.forEach((warn, index) => {
-                            document.getElementById('warning-field').innerHTML += `
-                            <tr class="table-${warn.icon}">
-                                    <td>Warning: ${warn.message}</td>
-                                </tr>`; 
-                            });
-                        }
-                        downloadBtn.disabled = false;
-                        loadingGif.style.opacity = '0';
-                        downloadingP.textContent = '';
                     }
                 }
             };
@@ -246,48 +275,6 @@
             downloadingP.textContent = 'Processing...';
             warnings.style.display = 'none';
         });
-
-        function getFile(url) {
-            const xhr = new XMLHttpRequest();
-            xhr.responseType = 'json';
-            xhr.onload = () => {
-                if (xhr.readyState === 4) {
-
-                    if (xhr.response === null) {
-                        alert('Error')
-                    } else {
-                        if (xhr.response.status) {
-                            var link = document.createElement("A");
-                            link.setAttribute("href", '/' + xhr.response.file);
-                            link.setAttribute("style","display:none");
-                            link.setAttribute("download",xhr.response.file);
-                            document.body.appendChild(link);
-                            downloadingP.textContent = 'Downloading...';    
-                            setTimeout(() => {       
-                                // hide loading gif and remove link.                                           //needed for firefox
-                                link.click();
-                                setInterval(() => {
-                                    downloadingP.textContent = '';
-                                    link.remove();
-                                    downloadBtn.disabled = false;
-                                    loadingGif.style.opacity = '0';
-                                    downloadingP.textContent = '';
-                                }, 3000);
-                            }, 10000);  
-                        } else {
-                            swal({
-                                title: new String(xhr.response.icon).toUpperCase(),
-                                text: xhr.response.message,
-                                icon: xhr.response.icon,
-                                type: 'error',
-                            })
-                        }
-                    }
-                }
-            };
-            xhr.open('POST', url);
-            xhr.send(null);
-        }
 
         function addARCOField(btn) {
             let arcoReportFile = document.querySelectorAll('.arco-report');
