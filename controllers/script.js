@@ -636,17 +636,20 @@ const deleteFile = (filePath, ms) => {
 const getArcoCellsValue = (ws, lastIndex) => {
     const XLSX = require('xlsx');
     var range = XLSX.utils.decode_range(ws['!ref']);
-    var data = {};
+    var data = {cellData: {}, rowNumber: 0};
     // rows
     for (let rowNum = 24; rowNum <= range.e.r; rowNum++) {
         // cells
         if (typeof ws['A'+rowNum] === 'object' && ws['A'+rowNum].w !== undefined) {
-            for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
-                let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
-                let cell = ws[cellName];
-                if (cell) {
-                    let newCell = cellName.substring(0, 1) + parseInt((cellName.substring(1, cellName.length) - 23 + lastIndex));
-                    data[newCell] = cell;
+            if (ws['A'+rowNum].v && ws['A'+rowNum].v !== '') {
+                data.rowNumber = data.rowNumber + 1;
+                for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
+                    let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+                    let cell = ws[cellName];
+                    if (cell) {
+                        let newCell = cellName.substring(0, 1) + parseInt((cellName.substring(1, cellName.length) - 22 + lastIndex));
+                        data.cellData[newCell] = cell;
+                    }
                 }
             }
         }

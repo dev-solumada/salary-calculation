@@ -163,47 +163,6 @@
             console.log(message);
             downloadingP.textContent = message;
         });
-
-        // ERROR
-        socket.on('error', data => {
-            swal({
-                title: new String(data.icon).toUpperCase(),
-                text: data.message,
-                icon: data.icon,
-            });
-
-            document.getElementById('warning-field').innerHTML = '';
-            // show warning
-            if (Array.isArray(data.warnings) && data.warnings.length > 0) {
-                warnings.style.display = 'block';
-                data.warnings.forEach((warn, index) => {
-                document.getElementById('warning-field').innerHTML += `
-                <tr class="table-${warn.icon}">
-                        <td>Warning: ${warn.message}</td>
-                    </tr>`; 
-                });
-            }
-            downloadBtn.disabled = false;
-            loadingGif.style.opacity = '0';
-            downloadingP.textContent = '';
-        });
-        
-        // DOWNLOAD
-        socket.on('download', data => {
-            var link = document.createElement("A");
-            link.setAttribute("href", '/' + data.file);
-            link.setAttribute("style","display:none");
-            link.setAttribute("download",data.file);
-            document.body.appendChild(link);                                                        //needed for firefox
-            link.click();
-            // hide loading gif and remove link.
-            setTimeout(() => {
-                downloadingP.textContent = '';
-                downloadBtn.disabled = false;
-                loadingGif.style.opacity = '0';
-                link.remove();
-            }, 3000);
-        });
     </script>
     <script>
         let downloadBtn = document.getElementById('download');
@@ -320,7 +279,41 @@
             // log response
             xhr.onload = () => {
                 if (xhr.readyState === 4) {
-
+                    if (xhr.response.status) {
+                        var link = document.createElement("A");
+                        link.setAttribute("href", '/' + xhr.response.file);
+                        link.setAttribute("style","display:none");
+                        link.setAttribute("download",xhr.response.file);
+                        document.body.appendChild(link);                                                        //needed for firefox
+                        link.click();
+                        // hide loading gif and remove link.
+                        downloadingP.textContent = 'Downloading...';
+                        setTimeout(() => {
+                        downloadingP.textContent = '';
+                            link.remove();
+                        }, 3000);
+                    } else {
+                        swal({
+                            title: new String(xhr.response.icon).toUpperCase(),
+                            text: xhr.response.message,
+                            icon: xhr.response.icon,
+                            type: 'error',
+                        })
+                    }
+                    document.getElementById('warning-field').innerHTML = '';
+                    // show warning
+                    if (Array.isArray(xhr.response.warnings) && xhr.response.warnings.length > 0) {
+                        warnings.style.display = 'block';
+                        xhr.response.warnings.forEach((warn, index) => {
+                        document.getElementById('warning-field').innerHTML += `
+                        <tr class="table-${warn.icon}">
+                                <td>Warning: ${warn.message}</td>
+                            </tr>`; 
+                        });
+                    }
+                    downloadBtn.disabled = false;
+                    loadingGif.style.opacity = '0';
+                    downloadingP.textContent = '';
                 }
             };
 

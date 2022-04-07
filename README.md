@@ -1,1 +1,1 @@
-# salary-calculation
+# os-salary-calculation

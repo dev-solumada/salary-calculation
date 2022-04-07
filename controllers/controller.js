@@ -692,18 +692,16 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
  * UPLOAD - RH file and Salary Sheet file.
  */
  router.route('/upload-xlsx').post(redirectLogin, async (req, res) => { 
-    const socket = Socket;
     try {
         if(!req.files) {
-            return req.app.get('socket').emit('error', {
+            return res.send({
                 status: false,
                 icon: 'warning',
                 message: 'No files uploaded!'
             });
         } else {
             /* socket */
-            req.app.get('socket').emit('action', 'Starting data extraction...');
-            console.log('emmitted')
+            await req.app.get('socket').emit('action', 'Starting data extraction...');
             // file directory
             const DIR = await 'uploads';
             // verifier le repertoire
@@ -711,7 +709,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 await fs.mkdirSync(DIR);
             }
             // files
-            const FILES = req.files;
+            const FILES = await req.files;
             // file keys
             const FileKeys = await Object.keys(FILES);
             // get the global salary sheet
@@ -719,7 +717,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             // check files
             // NO Sheet file selected
             if (!GSSFile) {
-                return req.app.get('socket').emit('error', {
+                return await res.send({
                     status: false,
                     icon: 'warning',
                     message: 'No GLOBAL SALARY Sheet file uploaded!'
@@ -727,42 +725,42 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             }
             // No file that contains all data selected
             if (FileKeys.length === 1) {
-                return req.app.get('socket').emit('error', {
+                return await res.send({
                     status: false,
                     icon: 'warning',
                     message: 'No file that contains data uploaded!'
                 });
             } 
             // time to file
-            const time = new Date().getTime();
+            const time = await new Date().getTime();
             // gs path
             const GSSPATH = await `${DIR}/${GSSFile.name.split('.xlsx')[0]}_${time}.xlsx`;
             // COPY GSS FILE
             await GSSFile.mv(GSSPATH);
             /* socket */
-            req.app.get('socket').emit('action', 'Cloning: ' + GSSFile.name);
+            await req.app.get('socket').emit('action', 'Cloning: ' + GSSFile.name);
             // read sheet output file
             var wbo_sheet = await script.readWBxlsx(GSSPATH);
             var wbo_sheet_style = await script.readWBxlsxstyle(GSSPATH);
             // create the output file name
-            let date = new Date();
+            let date = await new Date();
             
             const OPFileName = await `${script.getDateNow().join(".")} GSS ${date.getTime()}.xlsx`;
             const OPFilePath = await `${DIR}/${OPFileName}`;
             /* socket */
-            req.app.get('socket').emit('action', 'Creating output filename as: ' + OPFileName);
+            await req.app.get('socket').emit('action', 'Creating output filename as: ' + OPFileName);
             // warnigngs
             const Warnings = await [];
             // step
-            var step = 0;
+            var step = await 0;
             // loop keys 
             for (let i = 0; i < FileKeys.length; i++) {
-                let key = FileKeys[i];
+                let key = await FileKeys[i];
                 // get file
                 let file = await FILES[key];
                 let filePath = await `${DIR}/${file.name.split('.xlsx')[0]}_${time}.xlsx`;
                 /* socket */
-                req.app.get('socket').emit('action', 'Copying and Reading: ' + file.name);
+                await req.app.get('socket').emit('action', 'Copying and Reading: ' + file.name);
                 // move file
                 await file.mv(filePath);
                 // set file timeout to delete
@@ -772,13 +770,13 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 // switch key file
                 switch (key) {
                     case 'rh_file':
-                        var sheetName = 'Repas & Transport';
-                        var sheetIndex = script.getSheetIndex(wbi, sheetName);
+                        var sheetName = await 'Repas & Transport';
+                        var sheetIndex = await script.getSheetIndex(wbi, sheetName);
                         //.get work sheet rh
                         var ws = await script.getWS(wbi, sheetIndex);
                         // check sheets
                         if (!ws) {
-                            Warnings.push({
+                            await Warnings.push({
                                 status: false,
                                 icon: 'warning',
                                 message: `The RH file has a problem. No "${sheetName}" sheetname found. Please check the file.`
@@ -786,23 +784,23 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         } else {
                             try {
                                 /* socket */
-                                req.app.get('socket').emit('action', 'Fetching all data from: ' + file.name);
+                                await req.app.get('socket').emit('action', 'Fetching all data from: ' + file.name);
                                 // fetch all data required
                                 var data = await script.fetchData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
-                                    Warnings.push({
+                                    await Warnings.push({
                                         status: false,
                                         icon: 'warning',
                                         message: 'No data found in the RH file.'
                                     });
                                 } else {
                                     /* socket */
-                                    req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
+                                    await req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // output file
                                     let output = await script.createOutput(data, wbo_sheet, wbo_sheet_style);
                                     if (output.agent_found === 0) {
-                                        Warnings.push({
+                                        await Warnings.push({
                                             status: false,
                                             icon: 'warning',
                                             message: 'No Agent and Required Columns found in the GLOBAL SALARY SHEET! Please verify the file.'
@@ -818,7 +816,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                     }
                                 }
                             } catch (error) {
-                                Warnings.push({
+                                await Warnings.push({
                                     status: false,
                                     icon: 'danger',
                                     message: 'The RH file has a big problem.'
@@ -828,11 +826,11 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         break;
                     // UNIFIED POST
                     case 'salaryup_file':
-                        var sheetName = 'UnifiedPost Salaris per agent';
-                        var sheetIndex = 1;//script.getSheetIndex(wbi, sheetName);
+                        var sheetName = await 'UnifiedPost Salaris per agent';
+                        var sheetIndex = await 1;//script.getSheetIndex(wbi, sheetName);
                         ws = await script.getWS(wbi, sheetIndex);
                         if (!ws) {
-                            Warnings.push({
+                            await Warnings.push({
                                 status: false,
                                 icon: 'warning',
                                 message: `The UP Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
@@ -840,18 +838,18 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         } else {
                             try {
                                 /* socket */
-                                req.app.get('socket').emit('action', 'Fetching all data from: ' + file.name);
+                                await req.app.get('socket').emit('action', 'Fetching all data from: ' + file.name);
                                 data = await script.getSalaryUPData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
-                                    Warnings.push({
+                                    await Warnings.push({
                                         status: false,
                                         icon: 'warning',
                                         message: 'No data found in the UP Salary file! Please verify it.'
                                     });
                                 } else {
                                     /* socket */
-                                    req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
+                                    await req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
                                     if (step !== 0)
                                         wbo_sheet = await script.readWBxlsx(OPFilePath);
@@ -860,7 +858,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                     step = await step + 1;
                                 }
                             } catch (error) {
-                                Warnings.push({
+                                await Warnings.push({
                                     status: false,
                                     icon: 'danger',
                                     message: 'The UP Salary file has a big problem.'
@@ -870,11 +868,11 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         break;
                     // AGROBOX
                     case 'salaryagrobox_file':
-                        var sheetName = 'agrobox salaries per agent';
-                        var sheetIndex = script.getSheetIndex(wbi, sheetName);
+                        var sheetName = await 'agrobox salaries per agent';
+                        var sheetIndex = await script.getSheetIndex(wbi, sheetName);
                         ws = await script.getWS(wbi, sheetIndex);
                         if (!ws) {
-                            Warnings.push({
+                            await Warnings.push({
                                 status: false,
                                 icon: 'warning',
                                 message: `The Agrobox Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
@@ -882,18 +880,18 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         } else {
                             try {
                                 /* socket */
-                                req.app.get('socket').emit('action', 'Fetching all data from: ' + file.name);
+                                await req.app.get('socket').emit('action', 'Fetching all data from: ' + file.name);
                                 data = await script.getSalaryAgroboxData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
-                                    Warnings.push({
+                                    await Warnings.push({
                                         status: false,
                                         icon: 'warning',
                                         message: 'No data found in the Agrobox Salary file! Please verify it.'
                                     });
                                 } else {
                                     /* socket */
-                                    req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
+                                    await req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
                                     if (step !== 0)
                                         wbo_sheet = await script.readWBxlsx(OPFilePath);
@@ -902,7 +900,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                     step = await step + 1;
                                 }
                             } catch (error) {
-                                Warnings.push({
+                                await Warnings.push({
                                     status: false,
                                     icon: 'danger',
                                     message: 'The Agrobox Salary file has a big problem.'
@@ -911,11 +909,11 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         }
                         break;
                     case 'salaryarco_file':
-                        var sheetName = 'Summary';
-                        var sheetIndex = script.getSheetIndex(wbi, sheetName);
+                        var sheetName = await 'Summary';
+                        var sheetIndex = await script.getSheetIndex(wbi, sheetName);
                         ws = await script.getWS(wbi, 1);
                         if (!ws) {
-                            Warnings.push({
+                            await Warnings.push({
                                 status: false,
                                 icon: 'warning',
                                 message: `The Arco Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
@@ -923,18 +921,18 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                         } else {
                             try {
                                 /* socket */
-                                req.app.get('socket').emit('action', 'Fetching all data from: ' + file.name);
+                                await req.app.get('socket').emit('action', 'Fetching all data from: ' + file.name);
                                 data = await script.getSalaryArcoData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
-                                    Warnings.push({
+                                    await Warnings.push({
                                         status: false,
                                         icon: 'warning',
                                         message: 'No data found in the Arco Salary file! Please verify it.'
                                     });
                                 } else {
                                     /* socket */
-                                    req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
+                                    await req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
                                     if (step !== 0)
                                         wbo_sheet = await script.readWBxlsx(OPFilePath);
@@ -943,8 +941,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                     step = await step + 1;
                                 }
                             } catch (error) {
-                                console.log(error);
-                                Warnings.push({
+                                await console.log(error);
+                                await Warnings.push({
                                     status: false,
                                     icon: 'danger',
                                     message: 'The Agrobox Salary file has a big problem.'
@@ -958,7 +956,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             }
 
             /* socket */
-            req.app.get('socket').emit('action', 'Finishing Data Extraction...');
+            await req.app.get('socket').emit('action', 'Finishing Data Extraction...');
             // FINISHED check file
             if (step > 0 && fs.existsSync(OPFilePath)) {
                 // set timeout for the output file
@@ -967,14 +965,14 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 }, 1000 * 60 * 60);
                 
                 //send response
-                req.app.get('socket').emit('download', {
+                await res.send({
                     status: true,
                     icon: 'success',
-                    message: 'The file is proccessed successfully.',
+                    message: 'The file is processed successfully.',
                     file: OPFileName,
                     warnings: Warnings
                 });
-                finished = true;
+                finished = await true;
                 // save info to database
                 mongoose.connect(
                     process.env.MONGO_URI,
@@ -997,7 +995,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     }
                     
                     // set notif
-                    let notif = {
+                    let notif = await {
                         category: 'salary calculation',
                         description: 'Salary calculation: recent activity',
                         creation: new Date(),
@@ -1006,8 +1004,8 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                     }
                     await new NotifSchema(notif).save();
                     
-                }).catch(err => {
-                    req.app.get('socket').emit('error', {
+                }).catch(async err => {
+                    await res.send({
                         target: 'database',
                         status: false,
                         message: 'Unable to connect the database.'
@@ -1015,7 +1013,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                 });
             } else {
                 //send response
-                req.app.get('socket').emit('error', {
+                await res.send({
                     status: false,
                     icon: 'warning',
                     message: 'Can not perform the program.',
@@ -1026,11 +1024,6 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
             return;
         }
     } catch (err) {
-        req.app.get('socket').emit('error', {
-            status: false,
-            icon: 'error',
-            message: 'Server error',
-        });
         console.log(err)
         res.status(500).send({status: false, icon: 'error', message: 'Server error!'});
     }
@@ -1042,10 +1035,10 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
  * UPLOAD - ARCO FILE
  */
 router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
-    const socket = Socket;
+    const socket = await Socket;
     try {
         if(!req.files) {
-            return req.app.get('socket').emit('error', {
+            return await res.send({
                 status: false,
                 icon: 'warning',
                 message: 'No files uploaded!'
@@ -1058,7 +1051,7 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                 await fs.mkdirSync(DIR);
             }
             // files
-            const FILES = req.files;
+            const FILES = await req.files;
             // file keys
             var FileKeys = await Object.keys(FILES);
             // get the global salary sheet
@@ -1066,7 +1059,7 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
             // check files
             // NO Sheet file selected
             if (!ARCOFile) {
-                return req.app.get('socket').emit('error', {
+                return await res.send({
                     status: false,
                     icon: 'warning',
                     message: 'No ARCO Salary file uploaded!'
@@ -1074,7 +1067,7 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
             }
             // No file that contains all data selected
             if (FileKeys.length === 1) {
-                return req.app.get('socket').emit('error', {
+                return await res.send({
                     status: false,
                     icon: 'warning',
                     message: 'No ARCO Report file uploaded!'
@@ -1082,45 +1075,45 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
             } 
             
             /* socket */
-            req.app.get('socket').emit('action', 'Starting correction...');
+            await req.app.get('socket').emit('action', 'Starting correction...');
             // time to file
-            const time = new Date().getTime();
+            const time = await new Date().getTime();
             // gs path
             const ARCOPath = await `${DIR}/${ARCOFile.name.split('.xlsx')[0]}_${time}.xlsx`;
 
             /* socket */
-            req.app.get('socket').emit('action', 'Copying: ' + ARCOFile.name);
+            await req.app.get('socket').emit('action', 'Copying: ' + ARCOFile.name);
             // COPY GSS FILE
             await ARCOFile.mv(ARCOPath);
 
             /* socket */
             // read sheet output file
-            req.app.get('socket').emit('action', 'Cloning: ' + ARCOFile.name);
+            await req.app.get('socket').emit('action', 'Cloning: ' + ARCOFile.name);
             var wbo_sheet = await script.readWBxlsx(ARCOPath);
 
             /* socket */
-            req.app.get('socket').emit('action', 'Fetch all style from: ' + ARCOFile.name);
+            await req.app.get('socket').emit('action', 'Fetch all style from: ' + ARCOFile.name);
             var wbo_sheet_style = await script.readWBxlsxstyle(ARCOPath);
             await script.deleteFile(ARCOPath, 25000);
 
             /* socket */
-            req.app.get('socket').emit('action', 'Preparing output file name.');
+            await req.app.get('socket').emit('action', 'Preparing output file name.');
             // create the output file name
-            let date = new Date();
+            let date = await new Date();
             const OPFileName = await `${script.getDateNow().join(".")} ARCO SALARIES WORKING CORRECTED ${date.getTime()}.xlsx`;
             const OPFilePath = await `${DIR}/${OPFileName}`;
             // set file name in a session
-            currentFile = OPFileName;
+            currentFile = await OPFileName;
             // warnigngs
             const Warnings = await [];
             // data from acro report
-            let lastIndex = 0;
+            let lastIndex = await 0;
             /* socket */
-            req.app.get('socket').emit('action', 'Copying arco report files.');
+            await req.app.get('socket').emit('action', 'Copying arco report files.');
             // loop keys 
-            FileKeys.splice(FileKeys.indexOf('arco_salary'), 1);
+            await FileKeys.splice(FileKeys.indexOf('arco_salary'), 1);
             for (let i = 0; i < FileKeys.length; i++) {
-                let key = FileKeys[i];
+                let key = await FileKeys[i];
                 // switch key file
                 if (key.includes('arco_report')) {
                     // get file
@@ -1128,25 +1121,25 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                     let filePath = await `${DIR}/${file.name.split('.xlsx')[0]}_${time}.xlsx`;
 
                     /* socket */
-                    req.app.get('socket').emit('action', 'Copying: ' + (file.name));
+                    await req.app.get('socket').emit('action', 'Copying: ' + (file.name));
                     // move file
                     await file.mv(filePath);
 
                     /* socket */
-                    req.app.get('socket').emit('action', 'Reading: ' + (file.name));
+                    await req.app.get('socket').emit('action', 'Reading: ' + (file.name));
                     // read excel file
                     var wbi = await script.readWBxlsxstyle(filePath);
                     // set file timeout to delete
                     await script.deleteFile(filePath, 25000);
-                    var sheetIndex = 0 ;
+                    var sheetIndex = await 0 ;
 
                     /* socket */
-                    req.app.get('socket').emit('action', 'Fetching all data from: ' + (file.name));
+                    await req.app.get('socket').emit('action', 'Fetching all data from: ' + (file.name));
                     //.get work sheet rh
                     var ws = await script.getWS(wbi, sheetIndex);
                     // check sheets
                     if (!ws) {
-                        Warnings.push({
+                        await Warnings.push({
                             status: false,
                             icon: 'warning',
                             message: `The ARCO Report file has a problem.`
@@ -1154,11 +1147,13 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                     } else {
                         try {
                             /* socket */
-                            req.app.get('socket').emit('action', 'Writing all data into: ' + OPFileName);
+                            await req.app.get('socket').emit('action', 'Writing all data into: ' + OPFileName);
                             // fetch all data required
-                            var data = await script.getArcoCellsValue(ws, lastIndex);
+                            var data = await script.getArcoCellsValue(ws, lastIndex - 1);
+                            // set last index
+                            lastIndex = await data.rowNumber - 1;
                             // if data is empty
-                            if (Object.keys(data).length <= 0) {
+                            if (Object.keys(data.cellData).length <= 0) {
                                 Warnings.push({
                                     status: false,
                                     icon: 'warning',
@@ -1166,18 +1161,16 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                                 });
                             } else {
                                 /* socket */
-                                req.app.get('socket').emit('action', 'Saving all from: ' + (file.name));
+                                await req.app.get('socket').emit('action', 'Saving all from: ' + (file.name));
                                 // save file
-                                let output = await script.combineStyle2(script.copyAndPasteARCO(data, wbo_sheet), wbo_sheet_style);
+                                let output = await script.combineStyle2(script.copyAndPasteARCO(data.cellData, wbo_sheet), wbo_sheet_style);
                                 // save file
                                 await script.saveFile(output, OPFilePath);
-                                // set last index
-                                let cellName = await Object.keys(data)[Object.keys(data).length-1];
-                                lastIndex = await parseInt(cellName.substring(1, cellName.length)); 
+                                console.log(lastIndex)
                             }
                         } catch (error) {
-                            console.log(error)
-                            Warnings.push({
+                            await console.log(error)
+                            await Warnings.push({
                                 status: false,
                                 icon: 'danger',
                                 message: 'There are somme errors.'
@@ -1187,7 +1180,7 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                 }
             }
             /* socket */
-            req.app.get('socket').emit('action', 'Finishing correction...');
+            await req.app.get('socket').emit('action', 'Finishing correction...');
             // FINISHED check file
             if (fs.existsSync(OPFilePath)) {
                 // set timeout for the output file
@@ -1195,15 +1188,6 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                     fs.unlinkSync(OPFilePath);
                 }, 1000 * 60 * 60);
                 
-                /* socket */
-                req.app.get('socket').emit('action', {
-                    status: true,
-                    icon: 'success',
-                    message: 'The file is proccessed successfully.',
-                    file: OPFileName,
-                    warnings: Warnings
-                });
-                console.log('download')
                 // save info to database
                 mongoose.connect(
                     process.env.MONGO_URI,
@@ -1213,7 +1197,7 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                     }
                 ).then(async () => {
                     // set notif
-                    let notif = {
+                    let notif = await {
                         category: 'correct arco',
                         description: 'ARCO Correction: Recent Activity',
                         creation: new Date(),
@@ -1223,15 +1207,32 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                     await new NotifSchema(notif).save();
                     
                 }).catch(async err => {
-                    req.app.get('socket').emit('error', {
+                    await res.send({
                         target: 'database',
                         status: false,
                         message: 'Unable to connect the database.'
                     });
                 });
+
+                /* socket */
+                await req.app.get('socket').emit('download', {
+                    status: true,
+                    icon: 'success',
+                    message: 'The file is proccessed successfully.',
+                    file: OPFileName,
+                    warnings: Warnings
+                });
+                await res.send({
+                    status: true,
+                    icon: 'success',
+                    message: 'The file is proccessed successfully.',
+                    file: OPFileName,
+                    warnings: Warnings
+                });
+                await console.log('download')
             } else {
                 //send response
-                req.app.get('socket').emit('error', {
+                await res.send({
                     status: false,
                     icon: 'warning',
                     message: 'Can not perform the program.',
@@ -1242,13 +1243,8 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
             return;
         }
     } catch (err) {
-        req.app.get('socket').emit('error', {
-            status: false,
-            icon: 'error',
-            message: 'Server error',
-        });
-        console.log(err)
-        res.status(500).send({status: false, icon: 'error', message: 'Server error!'});
+        await console.log(err)
+        await res.status(500).send({status: false, icon: 'error', message: 'Server error!'});
     }
 });
 
