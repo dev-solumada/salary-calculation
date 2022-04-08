@@ -136,6 +136,7 @@
     <script src="/js/exceljs.min.js"></script>
     <script src="../node_modules/socket.io/client-dist/socket.io.js"></script>
     <script>
+        var requestTimeout = false;
         var socket = io.connect('/');
         socket.on('connect', () => {
             // socket.on('connection');
@@ -148,6 +149,25 @@
         // ACTION
         socket.on('action', data => {
             downloadingP.textContent = data;
+        });
+        // ACTION
+        socket.on('download', data => {
+            if (requestTimeout) {
+                var link = document.createElement("A");
+                link.setAttribute("href", '/' + data.file);
+                link.setAttribute("style","display:none");
+                link.setAttribute("download",data.file);
+                document.body.appendChild(link);                                                        //needed for firefox
+                link.click();
+                // hide loading gif and remove link.
+                downloadingP.textContent = 'Downloading...';
+                setTimeout(() => {
+                    downloadBtn.disabled = false;
+                    loadingGif.style.opacity = '0';
+                    downloadingP.textContent = '';
+                    link.remove();
+                }, 3000);
+            }
         });
 
         let downloadBtn = document.getElementById('download');
@@ -194,6 +214,7 @@
         }
 
         document.forms[0].addEventListener('submit', (e) => {
+            requestTimeout = false;
             e.preventDefault();
             let formData = new FormData();
             let inputFiles = document.querySelectorAll('.arco-report');
@@ -246,6 +267,8 @@
                         downloadBtn.disabled = false;
                         loadingGif.style.opacity = '0';
                         downloadingP.textContent = '';
+                    } else {
+                        requestTimeout = true;
                     }
                 }
             };
