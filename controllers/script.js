@@ -461,7 +461,7 @@ const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
         let colSalaryAgrobox = ''
         if (i == 0) colSalaryAgrobox = 'F';
         
-        if (i == 2) colSalaryAgrobox = 'G';
+        if (i == 2) colSalaryAgrobox = 'H';
         if (i == 3) colSalaryAgrobox = 'D';
         if (i == 4) colSalaryAgrobox = 'H';
         
