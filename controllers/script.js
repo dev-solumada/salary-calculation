@@ -377,7 +377,7 @@ function randomnNumberCode(length = 6) {
         if (i == 0) colSalaryUp = 'G';
         if (i == 1) colSalaryUp = 'I';
         if (i == 2) colSalaryUp = 'E';
-        if (i == 3) colSalaryUp = 'F';
+        if (i == 3) colSalaryUp = 'G';
         if (i == 4) colSalaryUp = 'E';
         
         if (i == 6) colSalaryUp = 'D';
@@ -462,7 +462,7 @@ const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
         if (i == 0) colSalaryAgrobox = 'F';
         
         if (i == 2) colSalaryAgrobox = 'H';
-        if (i == 3) colSalaryAgrobox = 'D';
+        if (i == 3) colSalaryAgrobox = 'E';
         if (i == 4) colSalaryAgrobox = 'H';
         
         if (i == 6 || i == 8) colSalaryAgrobox = 'C';
