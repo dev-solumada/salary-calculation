@@ -35,8 +35,8 @@ const readWBxlsx = (filename) => {
 
 // read with style
 const readWBxlsxstyle = (filename) => {
-    const xlsxstyle = require('xlsx-style');
-    return xlsxstyle.readFile(filename, {cellStyles: true});
+    const xlsx = require('xlsx-style');
+    return xlsx.readFile(filename, {cellStyles: true});
 }
 
 const findData = (ws, key) => {
@@ -461,7 +461,7 @@ const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
         let colSalaryAgrobox = ''
         if (i == 0) colSalaryAgrobox = 'F';
         
-        if (i == 2) colSalaryAgrobox = 'G';
+        if (i == 2) colSalaryAgrobox = 'H';
         if (i == 3) colSalaryAgrobox = 'D';
         if (i == 4) colSalaryAgrobox = 'H';
         
@@ -730,6 +730,14 @@ const getTotalValidationARCO = (data = [], filterKey) => {
     }
 }
 
+
+function sleep(ms) {
+    return new Promise(resolve => {
+        setTimeout(resolve, ms);
+    });
+}
+  
+
 // export functions
 module.exports = {
     readWBxlsx,
@@ -761,6 +769,6 @@ module.exports = {
     copyAndPasteARCO,
     getARCOValidationFiltered,
     getTotalValidationARCO,
-
+    sleep,
     setFormula
 };

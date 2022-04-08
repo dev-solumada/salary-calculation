@@ -151,7 +151,7 @@
             downloadingP.textContent = data;
         });
         // ACTION
-        socket.on('download', data => {
+        socket.on('download1', data => {
             if (requestTimeout) {
                 var link = document.createElement("A");
                 link.setAttribute("href", '/' + data.file);
@@ -269,6 +269,7 @@
                         downloadingP.textContent = '';
                     } else {
                         requestTimeout = true;
+                        console.log('ato');
                     }
                 }
             };
