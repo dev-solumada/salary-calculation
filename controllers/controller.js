@@ -1151,7 +1151,7 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                             // fetch all data required
                             var data = await script.getArcoCellsValue(ws, lastIndex - 1);
                             // set last index
-                            lastIndex = await data.rowNumber - 1;
+                            lastIndex += await data.rowNumber - 1;
                             // if data is empty
                             if (Object.keys(data.cellData).length <= 0) {
                                 Warnings.push({
