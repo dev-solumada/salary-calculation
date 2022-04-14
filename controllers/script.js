@@ -194,7 +194,6 @@ const fetchData = (ws, group_col_data = []) => {
         while (ws[letter0+line] || ws[letter1+line]) {
             // objet pour construire un élément.
             let obj = {};
-            // console.log(typeof ws[letter1+line] !== 'undefined' && typeof ws[letter1+line] !== 'undefined');
             // creer un key shift sur l'objet.
             let shift = ws[letter0+(parseInt(array[0].substring(1, array[0].length)) - 1)];
             if (shift) obj[columsNames.shift] = shift.v;
@@ -369,19 +368,13 @@ function randomnNumberCode(length = 6) {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
+    const sheetColumn = getSheetColumnJSON();
     // parcourir tous les feuilles SHEETS
     for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
         let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
-        // chercher ou se situe le 2000 et 1000
-        let colSalaryUp = ''
-        if (i == 0) colSalaryUp = 'G';
-        if (i == 1) colSalaryUp = 'I';
-        if (i == 2) colSalaryUp = 'E';
-        if (i == 3) colSalaryUp = 'G';
-        if (i == 4) colSalaryUp = 'E';
-        
-        if (i == 6) colSalaryUp = 'D';
-        if (i == 8) colSalaryUp = 'D';
+        // target column to salary up
+        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+        let colSalaryUp = colGSS ? (colGSS['up'] || null) : null;
         
         // total transport
         let important_cols = ['A', 'B'];
@@ -399,7 +392,7 @@ function randomnNumberCode(length = 6) {
                     // salary 
                     if (columsNames.salaryUP in info) {
                         // cols to fill
-                        if (colSalaryUp != '') {
+                        if (colSalaryUp) {
                             let colIndex = colSalaryUp+line;
                             if (!ws[colIndex]) {
                                 ws[colIndex] = {t: 'n'}
@@ -454,18 +447,13 @@ const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
+    const sheetColumn = getSheetColumnJSON();
     // parcourir tous les feuilles SHEETS
     for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
         let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
-        // chercher ou se situe le 2000 et 1000
-        let colSalaryAgrobox = ''
-        if (i == 0) colSalaryAgrobox = 'F';
-        
-        if (i == 2) colSalaryAgrobox = 'H';
-        if (i == 3) colSalaryAgrobox = 'E';
-        if (i == 4) colSalaryAgrobox = 'H';
-        
-        if (i == 6 || i == 8) colSalaryAgrobox = 'C';
+        // target column to salary agrobox
+        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+        let colSalaryAgrobox = colGSS ? (colGSS['agrobox'] || null) : null;
         
         // total transport
         let important_cols = ['A', 'B'];
@@ -483,7 +471,7 @@ const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
                     // salary 
                     if (columsNames.salaryAGROBOX in info) {
                         // cols to fill
-                        if (colSalaryAgrobox != '') {
+                        if (colSalaryAgrobox) {
                             let colIndex = colSalaryAgrobox+line;
                             if (!ws[colIndex]) {
                                 ws[colIndex] = {t: 'n'}
@@ -539,14 +527,13 @@ const createOutputSalaryARCO = (DATA_RH = [], wb, wb_style) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
+    const sheetColumn = getSheetColumnJSON();
     // parcourir tous les feuilles SHEETS
     for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
         let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
-        // chercher ou se situe le 2000 et 1000
-        let colSalaryArco = ''
-        if (i == 0 || i == 5) colSalaryArco = 'D';
-        
-        if (i == 1 || i == 2) colSalaryArco = 'C';
+        // target column to salary arco
+        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+        let colSalaryArco = colGSS ? (colGSS['arco'] || null)  : null;
         
         // total transport
         let important_cols = ['A', 'B'];
@@ -563,7 +550,7 @@ const createOutputSalaryARCO = (DATA_RH = [], wb, wb_style) => {
                     // salary 
                     if (columsNames.salaryARCO in info) {
                         // cols to fill
-                        if (colSalaryArco != '') {
+                        if (colSalaryArco) {
                             let colIndex = colSalaryArco+line;
                             if (!ws[colIndex]) {
                                 ws[colIndex] = {t: 'n'}
@@ -611,6 +598,17 @@ const getSalaryArcoData = (ws) => {
     return data;
 }
 
+const setArcoReportNumber = (wb, lastIndex, number) => {
+    let ws = getWS(wb, 1);
+    if (lastIndex === 0) {
+        ws['M9'].v = ws['M9'].v;
+        ws['M9'].w = new String(number);
+    } else {
+        ws['M9'].v += number;
+        ws['M9'].w = new String(ws['M9'].v);
+    }
+}
+
 // convert date to [dd,mm,yyyy]
 function getDateNow() {
     var date = new Date(Date.now()),
@@ -641,7 +639,7 @@ const getArcoCellsValue = (ws, lastIndex) => {
     for (let rowNum = 24; rowNum <= range.e.r; rowNum++) {
         // cells
         if (typeof ws['A'+rowNum] === 'object' && ws['A'+rowNum].w !== undefined) {
-            if (ws['A'+rowNum].v && ws['A'+rowNum].v !== '') {
+            if (ws['A'+rowNum].w && ws['A'+rowNum].vw !== '') {
                 data.rowNumber = data.rowNumber + 1;
                 for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
                     let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
@@ -659,38 +657,23 @@ const getArcoCellsValue = (ws, lastIndex) => {
 
 
 const copyAndPasteARCO = (data, wb) => {
-    var newWorkbook = setFormula(wb);
+    var newWorkbook = wb;
     let ws = newWorkbook.Sheets[newWorkbook.SheetNames[0]];
     Object.keys(data).forEach(key => {ws[key] = data[key];});
-
-    // const XLSX = require('xlsx');
-    // var range = XLSX.utils.decode_range(ws['!ref']);
-    // data1 = getARCOValidationFiltered(ws);
-    // let v = getTotalValidationARCO(data1, 'M-KTN');
-    // for (let rowNum = 24; rowNum <= range.e.r; rowNum++) {
-    //     let cell = ws['I'+rowNum];
-    //     if (typeof cell === 'object') {
-    //         let v = getTotalValidationARCO(data, cell.w || '');
-    //         if (v) {
-    //             ws['D'+rowNum].v = v.v1Total;
-    //             ws['D'+rowNum].w = new String(v.v1Total);
-    //         } 
-    //     }
-    // }
-
     return newWorkbook;
 }
 
-const setFormula = (wb) => {
+const setFormula = (wb, length) => {
+    length += 1;
     const XLSX = require('xlsx');
     let ws = wb.Sheets[wb.SheetNames[1]];
     // looping throup sheet 2
     var range = XLSX.utils.decode_range(ws['!ref']);
     // rows
-    for (let rowNum = 9; rowNum <= range.e.r; rowNum++) {
-        let f = `SUMIF(${wb.SheetNames[0]}!C2:'${wb.SheetNames[0]}'!C${range.e.r},Summary!C${rowNum},${wb.SheetNames[0]}!D2:'${wb.SheetNames[0]}'!D${range.e.r})`;
+    for (let rowNum = 9; rowNum <= length; rowNum++) {
+        let f = `SUMIF(${wb.SheetNames[0]}!C2:'${wb.SheetNames[0]}'!C${length},Summary!C${rowNum},${wb.SheetNames[0]}!D2:'${wb.SheetNames[0]}'!D${length})`;
         if (typeof ws['D'+rowNum] === 'object') ws['D'+rowNum].f = f;
-        f = `SUMIF(${wb.SheetNames[0]}!F2:'${wb.SheetNames[0]}'!F${range.e.r},Summary!C${rowNum},${wb.SheetNames[0]}!D2:'${wb.SheetNames[0]}'!D${range.e.r})`;
+        f = `SUMIF(${wb.SheetNames[0]}!F2:'${wb.SheetNames[0]}'!F${length},Summary!C${rowNum},${wb.SheetNames[0]}!D2:'${wb.SheetNames[0]}'!D${length})`;
         if (typeof ws['E'+rowNum] === 'object') ws['E'+rowNum].f = f;
     }
     return wb;
@@ -736,7 +719,27 @@ function sleep(ms) {
         setTimeout(resolve, ms);
     });
 }
-  
+
+const getSheetColumnJSON = () => {
+    const json = require('./sheet_columns.json');
+    return json;
+}
+/*
+* GET LAST INDEX IN ARCO SALARIES FIRST SHEET
+*/
+const getLastIndexARCOSALARIES =  (ws) => {
+    const XLSX = require('xlsx');
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    var index = 1;
+    // rows
+    for (let rowNum = 2; rowNum <= range.e.r; rowNum++) {
+        // cells
+        if (typeof ws['A'+rowNum] === 'object' && ws['A'+rowNum].w !== undefined)
+            index = rowNum;
+        else break;
+    }
+    return index;
+}
 
 // export functions
 module.exports = {
@@ -769,6 +772,10 @@ module.exports = {
     copyAndPasteARCO,
     getARCOValidationFiltered,
     getTotalValidationARCO,
+    setArcoReportNumber,
     sleep,
-    setFormula
+    setFormula,
+
+    getSheetColumnJSON,
+    getLastIndexARCOSALARIES
 };

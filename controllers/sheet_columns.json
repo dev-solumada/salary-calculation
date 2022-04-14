@@ -1,0 +1,37 @@
+{
+    "gss" : {
+        "sheet1": {
+            "arco": "D",
+            "agrobox": "F",
+            "up": "G"
+        },
+        "sheet2": {
+            "arco": "C",
+            "up": "I"
+        },
+        "sheet3": {
+            "arco": "C",
+            "up": "E",
+            "agrobox": "H"
+        },
+        "sheet4": {
+            "agrobox": "E",
+            "up": "G"
+        },
+        "sheet5": {
+            "up": "E",
+            "agrobox": "H"
+        },
+        "sheet6": {
+            "arco": "D"
+        },
+        "sheet7": {
+            "agrobox": "C",
+            "up": "D"
+        },
+        "sheet9": {
+            "agrobox": "C",
+            "up": "D"
+        }
+    }
+}

@@ -9,8 +9,6 @@ const SCSchema = require('../models/SCSchema');
 const NotifSchema = require('../models/NotifSchema');
 const nodemailer = require('nodemailer');
 const moment = require('moment');
-var socketMessage = {event: '', message: ''}
-var Socket = null;
 //Mailing
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -92,6 +90,20 @@ const getNotifs = async () => {
 
     return notifs;
 }
+
+/* Check the session while posting */
+const checkSessionInPost = (req, res, next) => {
+    if (!req.session.userId) {
+        return res.send({
+            status: false,
+            icon: 'warning',
+            message: 'Your session has expired! Please login and try again.'
+        });
+    } else {
+        next();
+    }
+}
+
 
 // redirect to login
 const redirectLogin = (req, res, next) => {
@@ -374,7 +386,7 @@ router.route('/add-new-user').get(redirectLogin, async (req, res) => {
 /**
  * USERS - set user access.
  */
-router.route('/set-user-access').post(redirectLogin, (req, res) => {
+router.route('/set-user-access').post(checkSessionInPost, (req, res) => {
     mongoose.connect(
     process.env.MONGO_URI,
     MongooOptions
@@ -406,7 +418,7 @@ router.route('/set-user-access').post(redirectLogin, (req, res) => {
 /**
  * USERS - Delete new user.
  */
-router.route('/delete-user').post(redirectLogin, (req, res) => {
+router.route('/delete-user').post(checkSessionInPost, (req, res) => {
     mongoose.connect(
         process.env.MONGO_URI,
         MongooOptions
@@ -572,7 +584,7 @@ router.route('/users-list').get(redirectLogin, checkType, async (req, res) => {
 /**
  * Add user
  */
-router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
+router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
     mongoose.connect(
         process.env.MONGO_URI,
         MongooOptions
@@ -667,8 +679,6 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
 })
 
 
-
-
 /**
  * PROGRAMME - Salary Calculation.
  */
@@ -691,7 +701,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
 /**
  * UPLOAD - RH file and Salary Sheet file.
  */
- router.route('/upload-xlsx').post(redirectLogin, async (req, res) => { 
+ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => { 
     try {
         if(!req.files) {
             return res.send({
@@ -858,6 +868,7 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
                                     step = await step + 1;
                                 }
                             } catch (error) {
+                                console.log(error)
                                 await Warnings.push({
                                     status: false,
                                     icon: 'danger',
@@ -1029,13 +1040,10 @@ router.route('/add-user').post(redirectLogin, checkType, (req, res) => {
     }
 });
 
-
-
 /**
  * UPLOAD - ARCO FILE
  */
-router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
-    const socket = await Socket;
+router.route('/upload-correct-arco').post(checkSessionInPost, async (req, res) => {
     try {
         if(!req.files) {
             return await res.send({
@@ -1085,16 +1093,14 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
             await req.app.get('socket').emit('action', 'Copying: ' + ARCOFile.name);
             // COPY GSS FILE
             await ARCOFile.mv(ARCOPath);
+            req.session.ARCOPath = ARCOPath;
 
             /* socket */
             // read sheet output file
             await req.app.get('socket').emit('action', 'Cloning: ' + ARCOFile.name);
             var wbo_sheet = await script.readWBxlsx(ARCOPath);
-
-            /* socket */
-            await req.app.get('socket').emit('action', 'Fetch all style from: ' + ARCOFile.name);
-            var wbo_sheet_style = await script.readWBxlsxstyle(ARCOPath);
-            await script.deleteFile(ARCOPath, 25000);
+            req.session.wbo = wbo_sheet;
+            var wso = script.getWS(wbo_sheet, 0);
 
             /* socket */
             await req.app.get('socket').emit('action', 'Preparing output file name.');
@@ -1102,12 +1108,13 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
             let date = await new Date();
             const OPFileName = await `${script.getDateNow().join(".")} ARCO SALARIES WORKING CORRECTED ${date.getTime()}.xlsx`;
             const OPFilePath = await `${DIR}/${OPFileName}`;
+            req.session.OPFilePath = OPFilePath;
             // set file name in a session
             currentFile = await OPFileName;
             // warnigngs
             const Warnings = await [];
-            // data from acro report
-            let lastIndex = await 0;
+            // get last index from subject
+            let lastIndex = await (script.getLastIndexARCOSALARIES(wso) - 1) || 0;
             /* socket */
             await req.app.get('socket').emit('action', 'Copying arco report files.');
             // loop keys 
@@ -1163,10 +1170,12 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                                 /* socket */
                                 await req.app.get('socket').emit('action', 'Saving all from: ' + (file.name));
                                 // save file
-                                let output = await script.combineStyle2(script.copyAndPasteARCO(data.cellData, wbo_sheet), wbo_sheet_style);
+                                let output = await script.copyAndPasteARCO(data.cellData, wbo_sheet);
+                                // set lastindex
+                                // arco report file number
+                                await script.setArcoReportNumber(output, lastIndex, 1);
                                 // save file
                                 await script.saveFile(output, OPFilePath);
-                                console.log(lastIndex)
                             }
                         } catch (error) {
                             await console.log(error)
@@ -1179,15 +1188,11 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                     }
                 }
             }
-            /* socket */
-            await req.app.get('socket').emit('action', 'Finishing correction...');
             // FINISHED check file
             if (fs.existsSync(OPFilePath)) {
-                // set timeout for the output file
-                await setTimeout(() => {
-                    fs.unlinkSync(OPFilePath);
-                }, 1000 * 60 * 60);
-                
+                req.session.lastIndex = lastIndex;
+                /* socket */
+                await req.app.get('socket').emit('action', 'Preparing output file...');
                 // save info to database
                 mongoose.connect(
                     process.env.MONGO_URI,
@@ -1206,22 +1211,19 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                     }
                     await new NotifSchema(notif).save();
                     
-                }).catch(async err => {
-                    await res.send({
-                        target: 'database',
-                        status: false,
-                        message: 'Unable to connect the database.'
-                    });
+                }).catch(err => {
+                    console.log(err);
                 });
 
                 /* socket */
-                await req.app.get('socket').emit('download', {
-                    status: true,
-                    icon: 'success',
-                    message: 'The file is proccessed successfully.',
-                    file: OPFileName,
-                    warnings: Warnings
-                });
+                // await req.app.get('socket').emit('download', {
+                //     status: true,
+                //     icon: 'success',
+                //     message: 'The file is proccessed successfully.',
+                //     file: OPFileName,
+                //     warnings: Warnings
+                // });
+                
                 await res.send({
                     status: true,
                     icon: 'success',
@@ -1229,7 +1231,6 @@ router.route('/upload-correct-arco').post(redirectLogin, async (req, res) => {
                     file: OPFileName,
                     warnings: Warnings
                 });
-                await console.log('download')
             } else {
                 //send response
                 await res.send({
@@ -1264,6 +1265,42 @@ router.route('/correct-arco').get(redirectLogin, checkType, async (req, res) => 
             message: 'Unable to connect the database.'
         });
     })
+});
+
+router.route('/open-file').post(async(req, res) => {
+    /* socket */
+    await req.app.get('socket').emit('action', 'Preparing output file...');
+    let output = req.session.OPFilePath;
+    let outputName = output.split('/')[1];
+    try {
+        console.time();
+        await script.saveFile(script.setFormula(script.combineStyle2(script.readWBxlsxstyle(output), script.readWBxlsxstyle(req.session.ARCOPath)), req.session.lastIndex), output);
+        console.timeEnd();
+        await res.send({status: true, file: outputName});
+    } catch (err) {
+        console.log(err);
+        res.send({status: true, file: outputName});
+    }
+});
+
+router.route('/get-file').post(async(req, res) => {
+    if (req.session.OPFilePath) {
+        let output = req.session.OPFilePath;
+        let outputName = output.split('/')[1];
+        res.send({
+            status: true,
+            icon: 'success',
+            message: 'The file is proccessed successfully.',
+            file: outputName,
+        });
+    } else {
+        res.send({
+            status: false,
+            icon: 'error',
+            message: 'Please try again.',
+            file: outputName,
+        });
+    }
 });
 
 module.exports = router;
