@@ -110,6 +110,15 @@
                     </div>
                 </div>
             </div>
+            <div class="row" id="get-file" style="display:none;">
+                <div class="col-md-12 text-center">
+                    The program is too slow.
+                    Click here to get the file.
+                    <button type="button" onclick="getTheFile()" class="btn btn-primary">
+                        GET THE FILE
+                    </button>
+                </div>
+            </div>
             <div class="row">
                 <div class="col-md-12">
                     <div class="card-body">
@@ -134,9 +143,11 @@
     </div>
     <script src="/js/sweetalert.min.js"></script>
     <script src="/js/exceljs.min.js"></script>
+    <script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="../node_modules/socket.io/client-dist/socket.io.js"></script>
     <script>
         var requestTimeout = false;
+        var timeOutID = null;
         var socket = io.connect('/');
         socket.on('connect', () => {
             // socket.on('connection');
@@ -151,8 +162,9 @@
             downloadingP.textContent = data;
         });
         // ACTION
-        socket.on('download1', data => {
+        socket.on('download', data => {
             if (requestTimeout) {
+                if (timeOutID) clearTimeout(timeOutID);
                 var link = document.createElement("A");
                 link.setAttribute("href", '/' + data.file);
                 link.setAttribute("style","display:none");
@@ -228,30 +240,27 @@
             const xhr = new XMLHttpRequest();
             xhr.responseType = 'json';
 
+            if (timeOutID) clearTimeout(timeOutID);
+
             // log response
             xhr.onload = () => {
                 if (xhr.readyState === 4) {
+                    if (xhr.status === 503) {
+                        getTheFile(document.createElement('btn'), "/open-file");
+                    }
                     if (xhr.response) {
                         if (xhr.response.status) {
-                            var link = document.createElement("A");
-                            link.setAttribute("href", '/' + xhr.response.file);
-                            link.setAttribute("style","display:none");
-                            link.setAttribute("download",xhr.response.file);
-                            document.body.appendChild(link);                                                        //needed for firefox
-                            link.click();
-                            // hide loading gif and remove link.
-                            downloadingP.textContent = 'Downloading...';
-                            setTimeout(() => {
-                            downloadingP.textContent = '';
-                                link.remove();
-                            }, 3000);
+                            getTheFile(document.createElement('btn'), "/open-file");
                         } else {
                             swal({
                                 title: new String(xhr.response.icon).toUpperCase(),
                                 text: xhr.response.message,
                                 icon: xhr.response.icon,
                                 type: 'error',
-                            })
+                            });
+                            downloadBtn.disabled = false;
+                            loadingGif.style.opacity = '0';
+                            downloadingP.textContent = '';
                         }
                         document.getElementById('warning-field').innerHTML = '';
                         // show warning
@@ -264,12 +273,8 @@
                                 </tr>`; 
                             });
                         }
-                        downloadBtn.disabled = false;
-                        loadingGif.style.opacity = '0';
-                        downloadingP.textContent = '';
                     } else {
                         requestTimeout = true;
-                        console.log('ato');
                     }
                 }
             };
@@ -289,7 +294,7 @@
             div.className = 'form-group';
             div.innerHTML = `
             <div class="form-group">
-                <input type="file" name="arco-report" id="arco-report-${arcoReportFile.length}" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                <input type="file" name="arco-report" id="arco-report-${Date.now()}" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
                 <div class="input-group col-xs-12">
                     <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
                     <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-${arcoReportFile.length}')">
@@ -307,6 +312,40 @@
         }
         function deleteARCOField(btn) {
             btn.parentElement.parentElement.remove();
+        }
+
+        function getTheFile(btn, url) {
+            document.getElementById('get-file').style.display = 'none';
+            $.ajax({
+                type: "POST",
+                url: url,
+                data: "", 
+                contentType: "text/xml",
+                dataType: "text",
+            success: function (result) {
+                result = JSON.parse(result);
+                downloadingP.textContent = 'Downloading...';
+                console.log(result.file);
+                setTimeout(() => {
+                    downloadBtn.disabled = false;
+                    loadingGif.style.opacity = '0';
+                    downloadingP.textContent = '';
+                    var link = document.createElement("A");
+                    link.setAttribute("href", '/' + result.file);
+                    link.setAttribute("style","display:none");
+                    link.setAttribute("download",result.file);
+                    document.body.appendChild(link);                                                        //needed for firefox
+                    link.click();
+                    link.remove();
+                }, 2000);
+                downloadBtn.disabled = false;
+                loadingGif.style.opacity = '0';
+            },
+            error: function (result, status) {
+                console.log(result);
+                if (status === 503)
+                    getTheFile(document.createElement('button'), '/get-file');
+            }});
         }
     </script>
 </div>
