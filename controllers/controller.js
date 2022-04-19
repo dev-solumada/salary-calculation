@@ -506,6 +506,7 @@ router.route('/users-list').get(redirectLogin, checkType, async (req, res) => {
             let user = await {
                 username: req.body.username,
                 email: req.body.email,
+                usertype: req.body.userType,
             }
             // check username
             let userSelected = await UserSchema.findOne({email: user.email});
@@ -1106,7 +1107,7 @@ router.route('/upload-correct-arco').post(checkSessionInPost, async (req, res) =
             await req.app.get('socket').emit('action', 'Preparing output file name.');
             // create the output file name
             let date = await new Date();
-            const OPFileName = await `${script.getDateNow().join(".")} ARCO SALARIES WORKING CORRECTED ${date.getTime()}.xlsx`;
+            const OPFileName = await `${script.getDateInFileName(FILES[FileKeys[FileKeys.length - 2]].name)} ARCO SALARIES WORKING CORRECTED ${date.getTime()}.xlsx`;
             const OPFilePath = await `${DIR}/${OPFileName}`;
             req.session.OPFilePath = OPFilePath;
             // set file name in a session

@@ -1,3 +1,5 @@
+const { file } = require('googleapis/build/src/apis/file');
+
 const getWS = (wb, indexOfSheet) => {
     let sheet_name = wb.SheetNames[indexOfSheet];
     return wb.Sheets[sheet_name];
@@ -655,6 +657,10 @@ const getArcoCellsValue = (ws, lastIndex) => {
     return data;
 }
 
+const getDateInFileName = (filename) => {
+    let date = filename.split(' ')[0];
+    return date.substring(0,2) +'.'+date.substring(2,4)+'.'+date.substring(4,date.length);
+}
 
 const copyAndPasteARCO = (data, wb) => {
     var newWorkbook = wb;
@@ -664,7 +670,7 @@ const copyAndPasteARCO = (data, wb) => {
 }
 
 const setFormula = (wb, length) => {
-    length += 1;
+    length += 2;
     const XLSX = require('xlsx');
     let ws = wb.Sheets[wb.SheetNames[1]];
     // looping throup sheet 2
@@ -777,5 +783,6 @@ module.exports = {
     setFormula,
 
     getSheetColumnJSON,
-    getLastIndexARCOSALARIES
+    getLastIndexARCOSALARIES,
+    getDateInFileName
 };

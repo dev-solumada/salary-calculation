@@ -291,13 +291,14 @@
         function addARCOField(btn) {
             let arcoReportFile = document.querySelectorAll('.arco-report');
             let div = document.createElement('div');
+            let id = Date.now();
             div.className = 'form-group';
             div.innerHTML = `
             <div class="form-group">
-                <input type="file" name="arco-report" id="arco-report-${Date.now()}" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                <input type="file" name="arco-report" id="arco-report-${id}" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
                 <div class="input-group col-xs-12">
                     <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
-                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-${arcoReportFile.length}')">
+                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-${id}')">
                         <i class="ti-file btn-icon-prepend"></i>
                         Upload file
                     </button>
