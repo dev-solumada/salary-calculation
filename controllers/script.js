@@ -655,6 +655,10 @@ const getArcoCellsValue = (ws, lastIndex) => {
     return data;
 }
 
+const getDateInFileName = (filename) => {
+    let date = filename.split(' ')[0];
+    return date.substring(0,2) +'.'+date.substring(2,4)+'.'+date.substring(4,date.length);
+}
 
 const copyAndPasteARCO = (data, wb) => {
     var newWorkbook = wb;
@@ -664,11 +668,12 @@ const copyAndPasteARCO = (data, wb) => {
 }
 
 const setFormula = (wb, length) => {
-    length += 1;
+    length += 10;
     const XLSX = require('xlsx');
     let ws = wb.Sheets[wb.SheetNames[1]];
     // looping throup sheet 2
-    var range = XLSX.utils.decode_range(ws['!ref']);
+    let ws2 = wb.Sheets[wb.SheetNames[1]];
+    var range = XLSX.utils.decode_range(ws2['!ref']);
     // rows
     for (let rowNum = 9; rowNum <= length; rowNum++) {
         let f = `SUMIF(${wb.SheetNames[0]}!C2:'${wb.SheetNames[0]}'!C${length},Summary!C${rowNum},${wb.SheetNames[0]}!D2:'${wb.SheetNames[0]}'!D${length})`;
@@ -741,6 +746,11 @@ const getLastIndexARCOSALARIES =  (ws) => {
     return index;
 }
 
+const jsonToSheet = (json) => {
+    const XLSX = require('xlsx-style');
+    return XLSX.utils.json_to_sheet(json);
+}
+
 // export functions
 module.exports = {
     readWBxlsx,
@@ -775,7 +785,8 @@ module.exports = {
     setArcoReportNumber,
     sleep,
     setFormula,
-
+    jsonToSheet,
     getSheetColumnJSON,
-    getLastIndexARCOSALARIES
+    getLastIndexARCOSALARIES,
+    getDateInFileName
 };

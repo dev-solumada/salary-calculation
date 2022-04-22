@@ -146,41 +146,47 @@
     <script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="../node_modules/socket.io/client-dist/socket.io.js"></script>
     <script>
-        var requestTimeout = false;
-        var timeOutID = null;
-        var socket = io.connect('/');
-        socket.on('connect', () => {
-            // socket.on('connection');
-        });
-        socket.on("connect_error", () => {
-            setTimeout(() => {
-                socket.connect('/');
-            }, 1000);
-        });
-        // ACTION
-        socket.on('action', data => {
-            downloadingP.textContent = data;
-        });
-        // ACTION
-        socket.on('download', data => {
-            if (requestTimeout) {
-                if (timeOutID) clearTimeout(timeOutID);
-                var link = document.createElement("A");
-                link.setAttribute("href", '/' + data.file);
-                link.setAttribute("style","display:none");
-                link.setAttribute("download",data.file);
-                document.body.appendChild(link);                                                        //needed for firefox
-                link.click();
-                // hide loading gif and remove link.
-                downloadingP.textContent = 'Downloading...';
+        // post form data
+        const xhr = new XMLHttpRequest();
+        var socket = null;
+        const runSocket = () => {
+            socket = io.connect('/',{
+                reconnection: false,
+                rememberTransport: false,
+            })
+            socket.on('connection');
+            // ACTION
+            socket.on('action', data => {
+                downloadingP.textContent = data;
+            });
+            socket.on('prepare', data => {
+                if (!xhr.response)
+                    socket.emit('prepareoutput', 'do it as fast as you can my dear server.');
+                xhr.abort();
+            });
+            // ACTION
+            socket.on('result', data => {
                 setTimeout(() => {
-                    downloadBtn.disabled = false;
-                    loadingGif.style.opacity = '0';
-                    downloadingP.textContent = '';
-                    link.remove();
-                }, 3000);
-            }
-        });
+                    var link = document.createElement("A");
+                    link.setAttribute("href", '/' + data.file);
+                    link.setAttribute("style","display:none");
+                    link.setAttribute("download",data.file);
+                    document.body.appendChild(link);                                                        //needed for firefox
+                    link.click();
+                    // hide loading gif and remove link.
+                    downloadingP.textContent = 'Downloading...';
+                    setTimeout(() => {
+                        downloadBtn.disabled = false;
+                        loadingGif.style.opacity = '0';
+                        downloadingP.textContent = '';
+                        link.remove();
+                    }, 3000);
+                    runSocket();
+                }, 35000);
+            });
+
+        }
+        runSocket();
 
         let downloadBtn = document.getElementById('download');
         let loadingGif = document.getElementById('loading-gif');
@@ -226,7 +232,6 @@
         }
 
         document.forms[0].addEventListener('submit', (e) => {
-            requestTimeout = false;
             e.preventDefault();
             let formData = new FormData();
             let inputFiles = document.querySelectorAll('.arco-report');
@@ -236,21 +241,25 @@
             }
 
             formData.append('arco_salary', document.getElementById('arco-salary').files[0]);
-            // post form data
-            const xhr = new XMLHttpRequest();
             xhr.responseType = 'json';
-
-            if (timeOutID) clearTimeout(timeOutID);
 
             // log response
             xhr.onload = () => {
                 if (xhr.readyState === 4) {
                     if (xhr.status === 503) {
-                        getTheFile(document.createElement('btn'), "/open-file");
+                        // openFile();
+                        console.log('emitted 503');
+                        // setTimeout(() => {
+                        //     socket.emit('prepareoutput', 'do it as fast as you can my dear server.');
+                        //     xhr.abort();
+                        // }, inputFiles.length * 5000);
                     }
                     if (xhr.response) {
                         if (xhr.response.status) {
-                            getTheFile(document.createElement('btn'), "/open-file");
+                            // openFile();
+                            console.log('emitted true');
+                            socket.emit('prepareoutput', 'do it as fast as you can my dear server.');
+                            xhr.abort();
                         } else {
                             swal({
                                 title: new String(xhr.response.icon).toUpperCase(),
@@ -273,14 +282,13 @@
                                 </tr>`; 
                             });
                         }
-                    } else {
-                        requestTimeout = true;
                     }
+
                 }
             };
 
             // create and send the reqeust
-            xhr.open('POST', '/upload-correct-arco');
+            xhr.open('POST', '/arco-start');
             xhr.send(formData);
             downloadBtn.disabled = true;
             loadingGif.style.opacity = '1';
@@ -291,13 +299,14 @@
         function addARCOField(btn) {
             let arcoReportFile = document.querySelectorAll('.arco-report');
             let div = document.createElement('div');
+            let id = Date.now();
             div.className = 'form-group';
             div.innerHTML = `
             <div class="form-group">
-                <input type="file" name="arco-report" id="arco-report-${Date.now()}" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                <input type="file" name="arco-report" id="arco-report-${id}" class="file-upload-default arco-report" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
                 <div class="input-group col-xs-12">
                     <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
-                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-${arcoReportFile.length}')">
+                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'arco-report-${id}')">
                         <i class="ti-file btn-icon-prepend"></i>
                         Upload file
                     </button>
@@ -312,40 +321,6 @@
         }
         function deleteARCOField(btn) {
             btn.parentElement.parentElement.remove();
-        }
-
-        function getTheFile(btn, url) {
-            document.getElementById('get-file').style.display = 'none';
-            $.ajax({
-                type: "POST",
-                url: url,
-                data: "", 
-                contentType: "text/xml",
-                dataType: "text",
-            success: function (result) {
-                result = JSON.parse(result);
-                downloadingP.textContent = 'Downloading...';
-                console.log(result.file);
-                setTimeout(() => {
-                    downloadBtn.disabled = false;
-                    loadingGif.style.opacity = '0';
-                    downloadingP.textContent = '';
-                    var link = document.createElement("A");
-                    link.setAttribute("href", '/' + result.file);
-                    link.setAttribute("style","display:none");
-                    link.setAttribute("download",result.file);
-                    document.body.appendChild(link);                                                        //needed for firefox
-                    link.click();
-                    link.remove();
-                }, 2000);
-                downloadBtn.disabled = false;
-                loadingGif.style.opacity = '0';
-            },
-            error: function (result, status) {
-                console.log(result);
-                if (status === 503)
-                    getTheFile(document.createElement('button'), '/get-file');
-            }});
         }
     </script>
 </div>
