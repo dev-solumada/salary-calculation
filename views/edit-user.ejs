@@ -32,8 +32,8 @@
                 <div class="form-group">
                     <label for="exampleInputEmail3">User type</label>
                     <select class="form-control form-control py-3" id="usertype" name="usertype">
-                        <option value="guest" <%= (userEdit === 'guest' ? 'selected' : '') %> >Guest</option>
-                        <option value="admin" <%= (userEdit === 'admin' ? 'selected' : '') %> >Administrator</option>
+                        <option value="guest" <%= (userEdit.usertype === 'guest' ? 'selected' : '') %>>Guest</option>
+                        <option value="admin" <%= (userEdit.usertype === 'admin' ? 'selected' : '') %>>Administrator</option>
                     </select>
                 </div>
                 <button type="submit" id="submit-btn" class="btn btn-primary text-white me-2">Update</button>
@@ -54,6 +54,7 @@
         let username = document.getElementById('username');
         let email = document.getElementById('email');
         let password = document.getElementById('password');
+        let usertype = document.getElementById('usertype');
         let confirm = document.getElementById('confirm');
 
         let validation = true;
@@ -131,7 +132,7 @@
                     loadingGif.style.opacity = '0';
                 }
             };
-            http.send(`username=${username.value}&email=${email.value}`);
+            http.send(`username=${username.value}&email=${email.value}&userType=${usertype.value}`);
         }
 
 
