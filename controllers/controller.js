@@ -313,17 +313,11 @@ router.route('/login').all(redirectHome, (req, res) => {
             if (data.length > 0) {
                 res.send({
                     status: false,
-                    data: data
+                    data: data,
                 });
             } else {
                 req.session.userId = find_user;
                 Session[user.username] = {};
-                // go to home
-                res.send({
-                    status: true,
-                    message: 'Login with success!'
-                });
-
                 // set notif
                 let notif = {
                     category: 'user',
@@ -331,6 +325,14 @@ router.route('/login').all(redirectHome, (req, res) => {
                     creation: new Date()
                 }
                 await new NotifSchema(notif).save();
+                
+                // go to home
+                res.send({
+                    status: true,
+                    username: user.username,
+                    password: user.password,
+                    message: 'Login with success!'
+                });
             }
         }).catch(err => {
             console.log(err);
@@ -765,7 +767,7 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
             // warnigngs
             const Warnings = await [];
             // step
-            var step = await 0;
+            var output = null;
             // loop keys 
             for (let i = 0; i < FileKeys.length; i++) {
                 let key = await FileKeys[i];
@@ -776,8 +778,8 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
                 await req.app.get('socket').emit('action', 'Copying and Reading: ' + file.name);
                 // move file
                 await file.mv(filePath);
-                // set file timeout to delete
-                await script.deleteFile(filePath, 30000);
+                // set file timeout to delete  for 15 minutes
+                await script.deleteFile(filePath, 90 * 1000);
                 // read excel file
                 var wbi = await script.readWBxlsx(filePath);
                 // switch key file
@@ -811,22 +813,8 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
                                     /* socket */
                                     await req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // output file
-                                    let output = await script.createOutput(data, wbo_sheet, wbo_sheet_style);
-                                    if (output.agent_found === 0) {
-                                        await Warnings.push({
-                                            status: false,
-                                            icon: 'warning',
-                                            message: 'No Agent and Required Columns found in the GLOBAL SALARY SHEET! Please verify the file.'
-                                        });
-                                    } else {
-                                        // if step one is done change the to the output file.
-                                        if (step !== 0)
-                                        wbo_sheet = await script.readWBxlsx(OPFilePath);
-                                        let output = await script.createOutput(data, wbo_sheet, wbo_sheet_style);
-                                        // save file
-                                        await script.saveFile(output.wb, OPFilePath);
-                                        step = await step + 1;
-                                    }
+                                    // if step one is done change the to the output file.
+                                    output = await script.createOutput(data, output || wbo_sheet, wbo_sheet_style);
                                 }
                             } catch (error) {
                                 await Warnings.push({
@@ -864,11 +852,7 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
                                     /* socket */
                                     await req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
-                                    if (step !== 0)
-                                        wbo_sheet = await script.readWBxlsx(OPFilePath);
-                                    let output = await script.createOutputSalaryUp(data, wbo_sheet, wbo_sheet_style);
-                                    await script.saveFile(output.wb, OPFilePath);
-                                    step = await step + 1;
+                                    output = await script.createOutputSalaryUp(data, output || wbo_sheet, wbo_sheet_style);
                                 }
                             } catch (error) {
                                 console.log(error)
@@ -907,11 +891,7 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
                                     /* socket */
                                     await req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
-                                    if (step !== 0)
-                                        wbo_sheet = await script.readWBxlsx(OPFilePath);
-                                    let output = await script.createOutputSalaryAGROBOX(data, wbo_sheet, wbo_sheet_style);
-                                    await script.saveFile(output.wb, OPFilePath);
-                                    step = await step + 1;
+                                    output = await script.createOutputSalaryAGROBOX(data, output || wbo_sheet, wbo_sheet_style);
                                 }
                             } catch (error) {
                                 await Warnings.push({
@@ -948,11 +928,7 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
                                     /* socket */
                                     await req.app.get('socket').emit('action', 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
-                                    if (step !== 0)
-                                        wbo_sheet = await script.readWBxlsx(OPFilePath);
-                                    let output = await script.createOutputSalaryARCO(data, wbo_sheet, wbo_sheet_style);
-                                    await script.saveFile(output.wb, OPFilePath);
-                                    step = await step + 1;
+                                    output = await script.createOutputSalaryARCO(data, output || wbo_sheet, wbo_sheet_style);
                                 }
                             } catch (error) {
                                 await console.log(error);
@@ -968,11 +944,13 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
                         break;
                 }
             }
-
+            
             /* socket */
             await req.app.get('socket').emit('action', 'Finishing Data Extraction...');
+            // save file 
+            await script.saveFile(output, OPFilePath);
             // FINISHED check file
-            if (step > 0 && fs.existsSync(OPFilePath)) {
+            if (fs.existsSync(OPFilePath)) {
                 // set timeout for the output file
                 await setTimeout(() => {
                     fs.unlinkSync(OPFilePath);
@@ -1112,7 +1090,7 @@ router.route('/arco-start').post(checkSessionInPost, async (req, res) => {
             // loop keys 
             await FileKeys.splice(FileKeys.indexOf('arco_salary'), 1);
             session.FileKeys = FileKeys;
-        
+            let output = null;
             /* socket */
             await req.app.get('socket').emit('action', 'Copying arco report files.');
             for (let i = 0; i < FileKeys.length; i++) {
@@ -1126,6 +1104,8 @@ router.route('/arco-start').post(checkSessionInPost, async (req, res) => {
 
                 //.get work sheet rh
                 var ws = await script.getWS(script.readWBxlsxstyle(filePath), 0);
+                // delete file for 15 minutes
+                await script.deleteFile(filePath,  90 * 1000);
                 /* socket */
                 await req.app.get('socket').emit('action', 'Reading: ' + (file.name));
                 /* socket */
@@ -1156,12 +1136,10 @@ router.route('/arco-start').post(checkSessionInPost, async (req, res) => {
                             /* socket */
                             await req.app.get('socket').emit('action', 'Saving all data from: ' + (file.name));
                             // save file
-                            let output = await script.copyAndPasteARCO(data.cellData, session.wbo);
+                            output = await script.copyAndPasteARCO(data.cellData, output || session.wbo);
                             // set lastindex
                             // arco report file number
                             await script.setArcoReportNumber(output, session.lastIndex, 1);
-                            // save file
-                            await script.saveFile(output, session.OPFilePath);
                         }
                     } catch (error) {
                         await console.log(error)
@@ -1173,6 +1151,31 @@ router.route('/arco-start').post(checkSessionInPost, async (req, res) => {
                     }
                 }
             }
+            
+            // save file
+            await script.saveFile(output, session.OPFilePath);
+            
+            // save info to database
+            mongoose.connect(
+                process.env.MONGO_URI,
+                {
+                    useUnifiedTopology: true,
+                    UseNewUrlParser: true,
+                }
+            ).then(async () => {
+                // set notif
+                let notif = await {
+                    category: 'correct arco',
+                    description: 'ARCO Correction: Recent Activity',
+                    creation: new Date(),
+                    link: session.OPFileName,
+                    user: req.session.userId.username
+                }
+                await new NotifSchema(notif).save();
+
+            }).catch(err => {
+                console.log(err);
+            });
             /* socket */
             await req.app.get('socket').emit('prepare', 'Starting correction...');
             
@@ -1212,28 +1215,6 @@ const onPrepareOutput = async (req, res) => {
                     description: 'ARCO Correction: Recent Activity',
                     creation: new Date(),
                     link: session.OPFileName,
-                    user: req.session.username
-                }
-                await new NotifSchema(notif).save();
-
-            }).catch(err => {
-                console.log(err);
-            });
-
-            // save info to database
-            mongoose.connect(
-                process.env.MONGO_URI,
-                {
-                    useUnifiedTopology: true,
-                    UseNewUrlParser: true,
-                }
-            ).then(async () => {
-                // set notif
-                let notif = await {
-                    category: 'correct arco',
-                    description: 'ARCO Correction: Recent Activity',
-                    creation: new Date(),
-                    link: session.OPFileName,
                     user: req.session.userId.username
                 }
                 await new NotifSchema(notif).save();
@@ -1244,6 +1225,7 @@ const onPrepareOutput = async (req, res) => {
             try {
                 let wboutput = await script.combineStyle2(script.readWBxlsx(session.OPFilePath), script.readWBxlsxstyle(session.ARCOPath));
                 await script.saveFile(script.setFormula(wboutput, session.lastIndex), session.OPFilePath);
+                await script.deleteFile(session.OPFilePath, 60 * 60 * 1000);
                 console.log('created')
             } catch (err) {
                 console.log(err);

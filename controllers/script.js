@@ -325,10 +325,7 @@ const createOutput = (DATA_RH = [], wb, wb_style) => {
         }
     }
 
-    return {
-        agent_found : agent_found,
-        wb: combineStyle(newWorkbook, wb_style)
-    };
+    return combineStyle(newWorkbook, wb_style);
     
 }
 
@@ -407,10 +404,7 @@ function randomnNumberCode(length = 6) {
         }
     }
 
-    return {
-        agent_found : agent_found,
-        wb: combineStyle(newWorkbook, wb_style)
-    };
+    return combineStyle(newWorkbook, wb_style);
 }
 
 const getSalaryUPData = (ws) => {
@@ -486,10 +480,7 @@ const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
         }
     }
 
-    return {
-        agent_found : agent_found,
-        wb: combineStyle(newWorkbook, wb_style)
-    };
+    return combineStyle(newWorkbook, wb_style);
     
 }
 
@@ -555,6 +546,7 @@ const createOutputSalaryARCO = (DATA_RH = [], wb, wb_style) => {
                             if (!ws[colIndex]) {
                                 ws[colIndex] = {t: 'n'}
                             }
+                            console.log(info)
                             ws[colIndex].v = info[columsNames.salaryARCO];
                             ws[colIndex].w = new String(info[columsNames.salaryARCO]);
                         }
@@ -565,10 +557,7 @@ const createOutputSalaryARCO = (DATA_RH = [], wb, wb_style) => {
         }
     }
 
-    return {
-        agent_found : agent_found,
-        wb: combineStyle(newWorkbook, wb_style)
-    };
+    return combineStyle(newWorkbook, wb_style);
     
 }
 
@@ -587,7 +576,7 @@ const getSalaryArcoData = (ws) => {
                 if (cellName.includes('J')) obj[columsNames.number] = cell.w;
                 if (cellName.includes('I')) obj[columsNames.mcode] = cell.w;
                 if (cellName.includes('L')) {
-                    obj[columsNames.salaryARCO] = parseFloat(cell.v) || 0;
+                    obj[columsNames.salaryARCO] = Math.floor(parseFloat(cell.v)) || 0;
                 }
             }
         }
@@ -639,7 +628,7 @@ const getArcoCellsValue = (ws, lastIndex) => {
     for (let rowNum = 24; rowNum <= range.e.r; rowNum++) {
         // cells
         if (typeof ws['A'+rowNum] === 'object' && ws['A'+rowNum].w !== undefined) {
-            if (ws['A'+rowNum].w && ws['A'+rowNum].vw !== '') {
+            if (ws['A'+rowNum].w) {
                 data.rowNumber = data.rowNumber + 1;
                 for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
                     let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
@@ -737,11 +726,15 @@ const getLastIndexARCOSALARIES =  (ws) => {
     var range = XLSX.utils.decode_range(ws['!ref']);
     var index = 1;
     // rows
+    let emptyNum = 0;
     for (let rowNum = 2; rowNum <= range.e.r; rowNum++) {
         // cells
         if (typeof ws['A'+rowNum] === 'object' && ws['A'+rowNum].w !== undefined)
             index = rowNum;
-        else break;
+        else {
+            emptyNum++
+            if (emptyNum > 20) break;
+        }
     }
     return index;
 }

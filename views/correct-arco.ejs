@@ -160,7 +160,7 @@
                 downloadingP.textContent = data;
             });
             socket.on('prepare', data => {
-                if (!xhr.response)
+                if (!xhr.response) // the request timedout
                     socket.emit('prepareoutput', 'do it as fast as you can my dear server.');
                 xhr.abort();
             });
@@ -259,7 +259,7 @@
                             // openFile();
                             console.log('emitted true');
                             socket.emit('prepareoutput', 'do it as fast as you can my dear server.');
-                            xhr.abort();
+                            xhr.abort(); //unsent 
                         } else {
                             swal({
                                 title: new String(xhr.response.icon).toUpperCase(),

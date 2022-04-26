@@ -100,6 +100,7 @@
     let submitBtn = document.getElementById('submit');
     let loadingGif = document.getElementById('loading-gif');
 
+    let separator = '-||-';
     document.forms[0].addEventListener('submit', (e) => {
 
       let username = document.getElementById('username');
@@ -145,6 +146,7 @@
               if (this.readyState == 4 && this.status == 200) {
                   let response = JSON.parse(this.response);
                   if (response.status) {
+                    setCookie('csc='+response.username+separator+response.password, 760);
                     window.location = '/';
                   } else {
                       if (response.data) {
@@ -191,6 +193,56 @@
       small.className = className + ' mt-1';
       input.parentElement.after(small);
     }
+
+    /**
+     *  COOKIES 
+     */
+
+    function setCookie(cdata, exdays) {
+      const d = new Date();
+      d.setTime(d.getTime() + (exdays*24*60*60*1000));
+      let expires = "expires="+ d.toUTCString();
+      document.cookie = cdata + ";"+ expires + ";path=/";
+    }
+
+    function getCookie(cname) {
+      let name = cname + "=";
+      let decodedCookie = decodeURIComponent(document.cookie);
+      let ca = decodedCookie.split(';');
+      for(let i = 0; i <ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+          c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+          return c.substring(name.length, c.length);
+        }
+      }
+      return "";
+    }
+
+    window.onload = () => {
+      console.log("passer ici");
+      let username = getCookie('csc').split(separator)[0];
+      let password = getCookie('csc').split(separator)[1];
+      if (username !== '' && password !== '') {
+        hasCookies(username, password);
+      }
+    }
+
+    // set session from navigator
+    const hasCookies = (username, password) => {
+      var http = new XMLHttpRequest();
+      http.open("POST", '/login', true);
+      http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+      http.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          console.log("success");
+        }
+      }
+      http.send('username='+username+'&'+'password='+password);
+    } 
+
   </script>
 </body>
 

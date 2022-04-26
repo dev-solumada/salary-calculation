@@ -20,6 +20,10 @@ app.use(session({
   resave: true,
   saveUninitialized: true,
   secret: 'psc',
+  cookie: {
+    expires: new Date(Date.now() + 360000 * 24),
+    maxAge: Date.now() + 360000 * 24,
+  }
 }));
 
 const extendTimeoutMiddleware = (req, res, next) => {
