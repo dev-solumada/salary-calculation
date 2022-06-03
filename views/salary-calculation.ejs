@@ -3,7 +3,7 @@
         <div class="col-md-12 grid-margin">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                <h4 class="font-weight-bold mb-0">Programmes <i class="ti-angle-right"></i> Salary calculation</h4>
+                <h4 class="font-weight-bold mb-0">SALARY CALCULATION</h4>
                 </div>
                 <div>
                     <!-- <button type="button" class="btn btn-primary btn-icon-text btn-rounded">
@@ -89,6 +89,40 @@
                                 </select>
                             </div>
                         </div>
+                        <!-- UPC -->
+                        <h4 class="card-title">UPC</h4>
+                        <p class="card-description">Field to upload <code>UPC SALARY</code> file.</p>
+                        <div class="template-demo">
+                            <div class="form-group">
+                                <input type="file" name="salary-upc" id="salary-upc" class="file-upload-default" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'salary-upc')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="salary-agrobox-sheetname">
+                                </select>
+                            </div>
+                        </div>
+                        <!-- JeFacture -->
+                        <h4 class="card-title">JeFacture</h4>
+                        <p class="card-description">Field to upload <code>JeFacture SALARY</code> file.</p>
+                        <div class="template-demo">
+                            <div class="form-group">
+                                <input type="file" name="salary-jefacture" id="salary-jefacture" class="file-upload-default" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'salary-jefacture')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="salary-agrobox-sheetname">
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -159,7 +193,7 @@
             }, 1000);
         });
         // ACTION
-        socket.on('action', message => {
+        socket.on('action-<%= user.email %>', message => {
             console.log(message);
             downloadingP.textContent = message;
         });
@@ -174,6 +208,8 @@
             fileSelected3 = null,
             fileSelected4 = null,
             fileSelected5 = null;
+            fileSelected6 = null,
+            fileSelected7 = null;
 
         function uploadClick(btn, id) {
             let inputfile = document.getElementById(id);
@@ -189,7 +225,9 @@
                         if (id === 'salary-up') fileSelected2 = inputfile.files;
                         if (id === 'salary-agrobox') fileSelected3 = inputfile.files;
                         if (id === 'salary-arco') fileSelected4 = inputfile.files;
-                        if (id === 'salary-sheet') fileSelected5 = inputfile.files;
+                        if (id === 'salary-upc') fileSelected5 = inputfile.files;
+                        if (id === 'salary-facture') fileSelected6 = inputfile.files;
+                        if (id === 'salary-sheet') fileSelected7 = inputfile.files;
                         let btnR = document.createElement('button');
                         btnR.className = 'btn btn btn-inverse-danger btn-fw reset';
                         let i = document.createElement('i');
@@ -211,7 +249,9 @@
                         if (id === 'salary-up') inputfile.files = fileSelected2;
                         if (id === 'salary-agrobox') inputfile.files = fileSelected3;
                         if (id === 'salary-arco') inputfile.files = fileSelected4;
-                        if (id === 'salary-sheet') inputfile.files = fileSelected5;
+                        if (id === 'salary-upc') inputfile.files = fileSelected5;
+                        if (id === 'salary-jefacture') inputfile.files = fileSelected6;
+                        if (id === 'salary-sheet') inputfile.files = fileSelected7;
                     }
                     btn.parentElement.firstElementChild.value = inputfile.files[0].name;
                     let select = btn.parentElement.nextElementSibling;
@@ -246,36 +286,23 @@
             let file2 = document.getElementById('salary-up');
             let file3 = document.getElementById('salary-agrobox');
             let file4 = document.getElementById('salary-arco');
-            let file5 = document.getElementById('salary-sheet');
+            let file5 = document.getElementById('salary-upc');
+            let file6 = document.getElementById('salary-jefacture');
+            let file7 = document.getElementById('salary-sheet');
 
             let formData = new FormData();
             formData.append('rh_file', file1.files[0]);
             formData.append('salaryup_file', file2.files[0]);
             formData.append('salaryagrobox_file', file3.files[0]);
             formData.append('salaryarco_file', file4.files[0]);
-            formData.append('sheet_file', file5.files[0]);
-            console.log(formData.values);
+            formData.append('salaryupc_file', file5.files[0]);
+            formData.append('salaryjefacture_file', file6.files[0]);
+            formData.append('sheet_file', file7.files[0]);
 
             // post form data
             const xhr = new XMLHttpRequest();
             xhr.responseType = 'json';
 
-            // xhr.timeout = 1000 * 60 * 5; // time in milliseconds
-
-            // xhr.ontimeout = function (e) {
-            //     // XMLHttpRequest timed out. Do something here.
-            //     swal({
-            //         title: 'ERROR',
-            //         text: 'Request timeout. Please check your connection!',
-            //         icon: 'error',
-            //         type: 'error',
-            //     }).then(e => {
-            //         downloadBtn.disabled = false;
-            //         loadingGif.style.opacity = '0';
-            //         downloadingP.textContent = '';
-            //     });
-            // };
-            // log response
             xhr.onload = () => {
                 if (xhr.readyState === 4) {
                     if (xhr.response.status) {
@@ -323,6 +350,63 @@
             loadingGif.style.opacity = '1';
             downloadingP.textContent = 'Processing...';
             warnings.style.display = 'none';
-        })
+        });
+
+        // drag and drop 
+
+        (function() {
+            window.addEventListener("dragover",function(e){
+                e = e || event;
+                e.preventDefault();
+            },false);
+            window.addEventListener("drop",function(e){
+                e = e || event;
+                e.preventDefault();
+            },false);
+            
+            for (const input of document.querySelectorAll('input[type="file"]')) {
+                input.nextElementSibling.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (e.target.classList.contains('form-control'))  {
+                        e.target.style.borderStyle = 'dashed';
+                        e.target.placeholder = 'Drop file here.';   
+                    }
+                });
+                ['dragleave', 'dragend'].forEach(event => {
+                    input.nextElementSibling.addEventListener(event, (e) => {
+                        if (e.target.classList.contains('form-control'))  {
+                            e.target.style.borderStyle = 'solid';
+                            e.target.placeholder = 'Upload Microsoft Excel file';
+                        }
+                    });
+                });
+                input.nextElementSibling.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.target.placeholder = 'Upload Microsoft Excel file';
+                    e.target.style.borderStyle = 'solid';
+                    if (e.dataTransfer.files[0].type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+                        input.files = e.dataTransfer.files;
+                        input.nextElementSibling.firstElementChild.value = e.dataTransfer.files[0].name;
+                        let btn = input.nextElementSibling.lastElementChild;
+                        if (btn.previousElementSibling && btn.previousElementSibling.className === 'btn btn btn-inverse-danger btn-fw reset') {
+                            btn.previousElementSibling.remove();
+                        }
+                        let btnR = document.createElement('button');
+                        btnR.className = 'btn btn btn-inverse-danger btn-fw reset';
+                        let i = document.createElement('i');
+                        i.className = 'ti-share-alt btn-icon-prepend';
+                        btnR.append(i);
+                        btnR.append(document.createTextNode(' Reset'));
+                        
+                        btnR.addEventListener('click', function(e) {
+                            btnR.remove();
+                            input.files = null;
+                            btn.parentElement.firstElementChild.value = '';
+                        });
+                        btn.before(btnR);
+                    }
+                });
+            }
+        })();
     </script>
 </div>
