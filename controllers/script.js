@@ -20,7 +20,10 @@ const columsNames = {
     salaryUP: 'SALARY UP',
     salaryAGROBOX: 'SALARY AGROBOX',
     salaryARCO: 'SALARY ARCO',
-}
+    salaryUPC: 'SALARY UPC',
+    salaryJEFACTURE: 'SALARY JeFACTURE',
+};
+
 
 const colsIndexNames = () => {
     let alphabet = String.fromCharCode(...Array(123).keys()).slice(97).toUpperCase();
@@ -87,46 +90,6 @@ const combineStyle = (wb_xlsx, wb_xlsx_style) => {
 }
 
 
-
-const combineStyle2 = (wb_xlsx, wb_xlsx_style) => {
-    const XLSX = require('xlsx')
-    let sheets_leng = wb_xlsx.SheetNames.length;
-    for (let i = 0; i < sheets_leng; i++) {
-        let ws = wb_xlsx.Sheets[wb_xlsx.SheetNames[i]];
-        let ws_s = wb_xlsx_style.Sheets[wb_xlsx_style.SheetNames[i]];
-        var range = XLSX.utils.decode_range(ws['!ref']);
-        Object.keys(ws).forEach(key => {
-            if (ws_s[key]) {
-                let s = ws_s[key].s;
-                ws_s[key] = ws[key];
-                ws_s[key].s = s;
-            }
-        });
-        /* ELIMINER LES BACKGROUND NOIR */
-        for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
-            // loo all cells in the current column
-            for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
-                let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
-                // cell styled
-                const cellStyled = ws_s[cellName];
-                if (cellStyled && cellStyled.s) {
-                    if (cellStyled.s.fill && cellStyled.s.fill.bgColor) {
-                        if (cellStyled.s.fill.fgColor.rgb === '000000') { // if bg is dark
-                            cellStyled.s.fill.fgColor = {}; // set bg to white
-                            let style = cellStyled.s;
-                            delete style.fgColor;
-                            delete cellStyled.s.fill;
-                            ws_s[cellName].s = style;
-                        }   
-                    }
-                }
-            }
-        }
-    }
-
-    return wb_xlsx_style;
-}
-
 // arrange transport
 const arrangeTRANSPORTS = (ws) => {
     let data = [];
@@ -145,8 +108,6 @@ const arrangeTRANSPORTS = (ws) => {
     });
     return data;
 }
-
-
 
 const getColumnName = (ws, columnName) => {
     return findData(ws, columnName).map(e => e.c);
@@ -181,7 +142,7 @@ const groupCol = (...cols) => {
 
 // afficher toutes les données de chaque colonne
 const fetchData = (ws, group_col_data = []) => {
-    const xlsx = require('xlsx');
+    // const xlsx = require('xlsx');
     let jsonArray = [];
     if (group_col_data.length === 0)
         group_col_data = getGroupedRequiredCol(ws);
@@ -190,7 +151,7 @@ const fetchData = (ws, group_col_data = []) => {
         let line = parseInt(array[1].substring(1, array[1].length)) + 1;
         let letter0 = array[0].substring(0, 1); // M-CODE
         let letter1 = array[1].substring(0, 1); // Numbering Agent
-        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        // const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
         while (ws[letter0+line] || ws[letter1+line]) {
             // objet pour construire un élément.
             let obj = {};
@@ -217,8 +178,8 @@ const fetchData = (ws, group_col_data = []) => {
     return jsonArray;
 }
 
-const createOutput = (DATA_RH = [], wb, wb_style) => {
-    var agent_found = 0;
+
+const createOutput = (DATA_RH = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
@@ -226,7 +187,10 @@ const createOutput = (DATA_RH = [], wb, wb_style) => {
     for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
         let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
         // chercher ou se situe le 2000 et 1000
-        let colsToFill = Array.from(Object.keys(ws)).filter(v => ws[v].w === '1000' || ws[v].w === '2000' || ws[v].w === 'TRANSPORT (2000/day)' || new String(ws[v].w).match('REPAS'));
+        let colsToFill = Array.from(Object.keys(ws)).filter(v => ws[v].w === getVar().transpprice.night
+            || ws[v].w === getVar().transpprice.day
+            || ws[v].w === 'TRANSPORT (2000/day)'
+            || new String(ws[v].w).match('REPAS'));
             colsToFill = colsToFill.map(e => { return {c: e, v: ws[e]} });
         // total transport
         // let total_col = Array.from(Object.keys(ws)).find(v => new String(ws[v].w).match('TOTAL'));
@@ -237,16 +201,16 @@ const createOutput = (DATA_RH = [], wb, wb_style) => {
         let target100 = null, 
             target200 = null;
         while (line <= rows.length) {
-            if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
+            if (ws[important_cols[0] + line] !== undefined || ws[important_cols[1] + line] !== undefined) {
                 // numbering agent
-                let numberingagent = new String(ws[important_cols[0]+line].w).trim();
-                let mcode = new String(ws[important_cols[1]+line].w).trim();
+                let numberingagent = new String(ws[important_cols[0]+line]?.w ?? '').trim();
+                let mcode = new String(ws[important_cols[1]+line]?.w ?? '').trim();
                 let info = null;
-                
+
                 // PDFButler
                 if (new String(numberingagent).match('PDFB-')) {
                     info = DATA_RH.find(e => e[columsNames.number] === numberingagent);
-                } else if (mcode === 'GARDIEN') {
+                } else if (new String(numberingagent).includes('GARDIEN CHARLES')) {
                     info = DATA_RH.find(e => e[columsNames.mcode] === 'Gardien');
                 } else {
                     // get info via RH by M-CODE and Numbering Agent
@@ -254,9 +218,8 @@ const createOutput = (DATA_RH = [], wb, wb_style) => {
                 }
                 if (info) {
                     // increment the numbers of agent
-                    agent_found += 1;
-                    var col2000 = colsToFill.find(e => e.v.v === 2000);
-                    var col1000 = colsToFill.find(e => e.v.v === 1000);
+                    var col2000 = colsToFill.find(e => e.v.v === parseFloat(getVar().transpprice.day));
+                    var col1000 = colsToFill.find(e => e.v.v === parseFloat(getVar().transpprice.night));
                     if (col1000) target100 = col1000.c.substring(0, 1)+line;
                     if (col2000) target200 = col2000.c.substring(0, 1)+line;
                     switch (info[columsNames.shift]) {
@@ -310,14 +273,15 @@ const createOutput = (DATA_RH = [], wb, wb_style) => {
                         colsToFill.find(e => new String(e.v.v).toUpperCase().match('REPAS'))
                         : {c: 'G43'};
                     
-                    if (colRep)
+                    if (colRep) {
                         if (columsNames.repas in info) {
                             if (typeof ws[colRep.c.substring(0, 1)+line] === 'undefined')
                                 ws[colRep.c.substring(0, 1)+line] = {};
                             ws[colRep.c.substring(0, 1)+line].t = 'n';
-                            let number = info[columsNames.mcode] === 'Gardien' ? (parseFloat(info[columsNames.repas]) || 0) : (parseFloat(info[columsNames.repas]) || 0) * 3500;
+                            let number = info[columsNames.mcode] === 'Gardien' ? (parseFloat(info[columsNames.repas]) || 0) : (parseFloat(info[columsNames.repas]) || 0) * parseFloat(getVar().repas);
                             ws[colRep.c.substring(0, 1)+line].v = number;
                             ws[colRep.c.substring(0, 1)+line].w = ws[colRep.c.substring(0, 1)+line].v;
+                        }
                     }
                 }
             }
@@ -325,14 +289,14 @@ const createOutput = (DATA_RH = [], wb, wb_style) => {
         }
     }
 
-    return combineStyle(newWorkbook, wb_style);
+    return newWorkbook;
     
 }
 
 // sauvegarder le fichier xlsx
-const saveFile = (wb, filename) => {
+const saveFile = (wb, wbs, filename) => {
     let save = require('sheetjs-style');
-    save.writeFile(wb, filename, {type: 'file'});
+    save.writeFile(combineStyle(wb, wbs), filename, {type: 'file'});
 }
 
 function randomCode(length = 6) {
@@ -356,16 +320,17 @@ function randomnNumberCode(length = 6) {
     return code;
 }
 
+// ===========================================================
 /**
  * SALARY EXTRACTION
  */
+// ===========================================================
 
- const createOutputSalaryUp = (DATA_RH = [], wb, wb_style) => {
-    var agent_found = 0;
+ const createOutputSalaryUp = (DATA_RH = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
-    const sheetColumn = getSheetColumnJSON();
+    const sheetColumn = getVar();
     // parcourir tous les feuilles SHEETS
     for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
         let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
@@ -404,7 +369,7 @@ function randomnNumberCode(length = 6) {
         }
     }
 
-    return combineStyle(newWorkbook, wb_style);
+    return newWorkbook;
 }
 
 const getSalaryUPData = (ws) => {
@@ -432,16 +397,17 @@ const getSalaryUPData = (ws) => {
     return data;
 }
 
+// ===========================================================
 /**
  * AGROBOX
  */
+// ===========================================================
 
-const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
-    var agent_found = 0;
+const createOutputSalaryAGROBOX = (DATA_RH = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
-    const sheetColumn = getSheetColumnJSON();
+    const sheetColumn = getVar();
     // parcourir tous les feuilles SHEETS
     for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
         let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
@@ -480,7 +446,7 @@ const createOutputSalaryAGROBOX = (DATA_RH = [], wb, wb_style) => {
         }
     }
 
-    return combineStyle(newWorkbook, wb_style);
+    return newWorkbook;
     
 }
 
@@ -509,16 +475,17 @@ const getSalaryAgroboxData = (ws) => {
     return data;
 }
 
+// ===========================================================
 /**
  * ACRO
  */
+// ===========================================================
 
-const createOutputSalaryARCO = (DATA_RH = [], wb, wb_style) => {
-    var agent_found = 0;
+const createOutputSalaryARCO = (DATA_RH = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
-    const sheetColumn = getSheetColumnJSON();
+    const sheetColumn = getVar();
     // parcourir tous les feuilles SHEETS
     for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
         let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
@@ -546,7 +513,6 @@ const createOutputSalaryARCO = (DATA_RH = [], wb, wb_style) => {
                             if (!ws[colIndex]) {
                                 ws[colIndex] = {t: 'n'}
                             }
-                            console.log(info)
                             ws[colIndex].v = info[columsNames.salaryARCO];
                             ws[colIndex].w = new String(info[columsNames.salaryARCO]);
                         }
@@ -557,7 +523,7 @@ const createOutputSalaryARCO = (DATA_RH = [], wb, wb_style) => {
         }
     }
 
-    return combineStyle(newWorkbook, wb_style);
+    return newWorkbook;
     
 }
 
@@ -576,7 +542,7 @@ const getSalaryArcoData = (ws) => {
                 if (cellName.includes('J')) obj[columsNames.number] = cell.w;
                 if (cellName.includes('I')) obj[columsNames.mcode] = cell.w;
                 if (cellName.includes('L')) {
-                    obj[columsNames.salaryARCO] = Math.floor(parseFloat(cell.v)) || 0;
+                    obj[columsNames.salaryARCO] = Math.round(parseFloat(cell.v)) || 0;
                 }
             }
         }
@@ -587,16 +553,82 @@ const getSalaryArcoData = (ws) => {
     return data;
 }
 
-const setArcoReportNumber = (wb, lastIndex, number) => {
-    let ws = getWS(wb, 1);
-    if (lastIndex === 0) {
-        ws['M9'].v = ws['M9'].v;
-        ws['M9'].w = new String(number);
-    } else {
-        ws['M9'].v += number;
-        ws['M9'].w = new String(ws['M9'].v);
+
+// ===========================================================
+/**
+ * UPC
+ */
+// ===========================================================
+ const getSalaryUPCData = (ws) => {
+    const XLSX = require('xlsx');
+    var data = [];
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
+        // loo all cells in the current column
+        let obj = {};
+        for (let colNum = range.s.c; colNum <= 3; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            // cell styled
+            const cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('A')) obj[columsNames.number] = cell.w;
+                if (cellName.includes('B')) obj[columsNames.mcode] = cell.w;
+                if (cellName.includes('C')) obj[columsNames.salaryUPC] = parseFloat(cell.w) || 0;
+            }
+        }
+        // if keys exist
+        if (columsNames.mcode in obj && columsNames.salaryUPC in obj) 
+            data.push(obj);
     }
+    return data;
 }
+
+const createOutputSalaryUPC = (DATA_RH = [], wb) => {
+    const xlsx = require('xlsx');
+    // creer un nouveau work book
+    var newWorkbook = wb;
+    const sheetColumn = getVar();
+    // parcourir tous les feuilles SHEETS
+    for (let i = 2; i <= 4; i++) {
+        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
+        // target column to salary agrobox
+        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+        let colSalaryAgrobox = colGSS ? (colGSS['upc'] || null) : null;
+        
+        // total transport
+        let important_cols = ['A', 'B'];
+        let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
+        let line = parseInt(first_A_col.substring(1, first_A_col.length));
+        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        while (line <= rows.length) {
+            if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
+                // numbering agent
+                let numberingagent = new String(ws[important_cols[0]+line].w).trim();
+                let mcode = new String(ws[important_cols[1]+line].w).trim();
+                // get info via RH by M-CODE and Numbering Agent
+                let info = DATA_RH.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
+                if (info) {
+                    // salary 
+                    if (columsNames.salaryUPC in info) {
+                        // cols to fill
+                        if (colSalaryAgrobox) {
+                            let colIndex = colSalaryAgrobox+line;
+                            if (!ws[colIndex]) {
+                                ws[colIndex] = {t: 'n'}
+                            }
+                            ws[colIndex].v = info[columsNames.salaryUPC];
+                            ws[colIndex].w = new String(info[columsNames.salaryUPC]);
+                        }
+                    }
+                }
+            }
+            line ++;
+        }
+    }
+
+    return newWorkbook;
+}
+
 
 // convert date to [dd,mm,yyyy]
 function getDateNow() {
@@ -616,140 +648,135 @@ const deleteFile = (filePath, ms) => {
     }, ms);
 }
 
+
 /**
- * CORRECT ARCO SALARY
+ * Add point to have a clear date
+ * 0000000 => 00.00.0000
  */
-// 25 - 1907
-const getArcoCellsValue = (ws, lastIndex) => {
-    const XLSX = require('xlsx');
-    var range = XLSX.utils.decode_range(ws['!ref']);
-    var data = {cellData: {}, rowNumber: 0};
-    // rows
-    for (let rowNum = 24; rowNum <= range.e.r; rowNum++) {
-        // cells
-        if (typeof ws['A'+rowNum] === 'object' && ws['A'+rowNum].w !== undefined) {
-            if (ws['A'+rowNum].w) {
-                data.rowNumber = data.rowNumber + 1;
-                for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
-                    let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
-                    let cell = ws[cellName];
-                    if (cell) {
-                        let newCell = cellName.substring(0, 1) + parseInt((cellName.substring(1, cellName.length) - 22 + lastIndex));
-                        data.cellData[newCell] = cell;
-                    }
-                }
-            }
-        }
-    }
-    return data;
-}
-
 const getDateInFileName = (filename) => {
-    let date = filename.split(' ')[0];
-    return date.substring(0,2) +'.'+date.substring(2,4)+'.'+date.substring(4,date.length);
-}
-
-const copyAndPasteARCO = (data, wb) => {
-    var newWorkbook = wb;
-    let ws = newWorkbook.Sheets[newWorkbook.SheetNames[0]];
-    Object.keys(data).forEach(key => {ws[key] = data[key];});
-    return newWorkbook;
-}
-
-const setFormula = (wb, length) => {
-    length += 10;
-    const XLSX = require('xlsx');
-    let ws = wb.Sheets[wb.SheetNames[1]];
-    // looping throup sheet 2
-    let ws2 = wb.Sheets[wb.SheetNames[1]];
-    var range = XLSX.utils.decode_range(ws2['!ref']);
-    // rows
-    for (let rowNum = 9; rowNum <= length; rowNum++) {
-        let f = `SUMIF(${wb.SheetNames[0]}!C2:'${wb.SheetNames[0]}'!C${length},Summary!C${rowNum},${wb.SheetNames[0]}!D2:'${wb.SheetNames[0]}'!D${length})`;
-        if (typeof ws['D'+rowNum] === 'object') ws['D'+rowNum].f = f;
-        f = `SUMIF(${wb.SheetNames[0]}!F2:'${wb.SheetNames[0]}'!F${length},Summary!C${rowNum},${wb.SheetNames[0]}!D2:'${wb.SheetNames[0]}'!D${length})`;
-        if (typeof ws['E'+rowNum] === 'object') ws['E'+rowNum].f = f;
+    try {
+        let date = filename.split(' ')[0];
+        return date.substring(0,2) +'.'+date.substring(2,4)+'.'+date.substring(4,date.length);   
+    } catch {
+        return ".";
     }
-    return wb;
 }
 
-const getARCOValidationFiltered = (ws) => {
-    const XLSX = require('xlsx');
-    var range = XLSX.utils.decode_range(ws['!ref']);
-    var data = [];
-    // rows
-    for (let rowNum = 24; rowNum <= range.e.r; rowNum++) {
-        // cells
-        let obj = {};
-        for (let colNum = range.s.c; colNum <= range.e.c; colNum++) {
-            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
-            let cell = ws[cellName];
-            if (cell) {
-                if (cellName.includes('A')) obj[ws['A24'].v] = cell.w;
-                if (cellName.includes('C')) obj['M-CODE'] = cell.w;
-                if (cellName.includes('D')) obj['v1'] = cell.v;
-                if (cellName.includes('E')) obj['v2'] = cell.v;
-            }
-        }
-        if (Object.keys(obj).length > 0) data.push(obj);
-    }
-    return data;
-}
-
-const getTotalValidationARCO = (data = [], filterKey) => {
-    let newData = data.filter(e => e['M-CODE'] === filterKey);
-    if (newData.length > 0) {
-        let v1Total = newData.map(e => e['v1']).reduce((a, b) => a + b, 0);
-        let v2Total = newData.map(e => e['v2']).reduce((a, b) => a + b, 0);
-        return {'v1Total': v1Total, 'v2Total': v2Total};
-    } else {
+/**
+GET file name
+*/
+const getFirstDateInOutputFilename = (filename = '') => {
+    try {
+        let splitted = filename.split('-');
+        return splitted.length === 1 ? null : filename.split('-')[0];
+    } catch {
         return null;
     }
 }
 
+const getVar = () => {
+    const json = require('./var.json');
+    return json;
+}
 
-function sleep(ms) {
-    return new Promise(resolve => {
-        setTimeout(resolve, ms);
+const accessDB = async (func) => {
+    require('mongoose').connect(
+        process.env.MONGO_URI, {
+        useUnifiedTopology: true,
+        UseNewUrlParser: true
+    }).then(async () => {
+        return func();
+    }).catch(err => {
+        console.log(err);
     });
 }
 
-const getSheetColumnJSON = () => {
-    const json = require('./sheet_columns.json');
-    return json;
-}
-/*
-* GET LAST INDEX IN ARCO SALARIES FIRST SHEET
-*/
-const getLastIndexARCOSALARIES =  (ws) => {
+// ===========================================================
+/**
+ * JeFACTURE
+ */
+// ===========================================================
+
+const getSalaryJEFACTUREData = (ws) => {
     const XLSX = require('xlsx');
+    var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
-    var index = 1;
-    // rows
-    let emptyNum = 0;
-    for (let rowNum = 2; rowNum <= range.e.r; rowNum++) {
-        // cells
-        if (typeof ws['A'+rowNum] === 'object' && ws['A'+rowNum].w !== undefined)
-            index = rowNum;
-        else {
-            emptyNum++
-            if (emptyNum > 20) break;
+    for (let rowNum = range.s.r; rowNum <= range.e.r; rowNum++) {
+        // loo all cells in the current column
+        let obj = {};
+        for (let colNum = range.s.c; colNum <= 3; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            // cell styled
+            const cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('A')) obj[columsNames.number] = cell.w;
+                if (cellName.includes('B')) obj[columsNames.mcode] = cell.w;
+                if (cellName.includes('C')) obj[columsNames.salaryJEFACTURE] = parseFloat(cell.w) || 0;
+            }
         }
+        // if keys exist
+        if (columsNames.mcode in obj && columsNames.salaryJEFACTURE in obj) 
+            data.push(obj);
     }
-    return index;
+    return data;
 }
 
-const jsonToSheet = (json) => {
-    const XLSX = require('xlsx-style');
-    return XLSX.utils.json_to_sheet(json);
+const createOutputSalaryJEFACTURE = (JFACTURE_Data = [], wb) => {
+    const xlsx = require('xlsx');
+    // creer un nouveau work book
+    var newWorkbook = wb;
+    const sheetColumn = getVar();
+    // parcourir tous les feuilles SHEETS
+    for (let i = 2; i < 3; i++) {
+        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
+        // target column to salary agrobox
+        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+        let colSalaryJEFACTURE = colGSS ? (colGSS['jefacture'] || null) : null;
+        
+        // total transport
+        let important_cols = ['A', 'B'];
+        let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
+        let line = parseInt(first_A_col.substring(1, first_A_col.length));
+        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        while (line <= rows.length) {
+            if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
+                // numbering agent
+                let numberingagent = new String(ws[important_cols[0]+line].w).trim();
+                let mcode = new String(ws[important_cols[1]+line].w).trim();
+                // get info via RH by M-CODE and Numbering Agent
+                let info = JFACTURE_Data.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
+                if (info) {
+                    // salary 
+                    if (columsNames.salaryJEFACTURE in info) {
+                        // cols to fill
+                        if (colSalaryJEFACTURE) {
+                            let colIndex = colSalaryJEFACTURE+line;
+                            if (!ws[colIndex]) {
+                                ws[colIndex] = {t: 'n'}
+                            }
+                            ws[colIndex].v = info[columsNames.salaryJEFACTURE];
+                            ws[colIndex].w = new String(info[columsNames.salaryJEFACTURE]);
+                        }
+                    }
+                }
+            }
+            line ++;
+        }
+    }
+
+    return newWorkbook;
 }
+
+
+
+
 
 // export functions
 module.exports = {
+    accessDB,
     readWBxlsx,
     readWBxlsxstyle,
     combineStyle,
-    combineStyle2,
     arrangeTRANSPORTS,
     getColumnName,
     groupCol,
@@ -770,16 +797,11 @@ module.exports = {
     getDateNow,
     getSheetIndex,
     deleteFile,
-    // correction
-    getArcoCellsValue,
-    copyAndPasteARCO,
-    getARCOValidationFiltered,
-    getTotalValidationARCO,
-    setArcoReportNumber,
-    sleep,
-    setFormula,
-    jsonToSheet,
-    getSheetColumnJSON,
-    getLastIndexARCOSALARIES,
-    getDateInFileName
+    getVar,
+    getDateInFileName,
+    getFirstDateInOutputFilename,
+    getSalaryUPCData,
+    createOutputSalaryUPC,
+    getSalaryJEFACTUREData,
+    createOutputSalaryJEFACTURE
 };

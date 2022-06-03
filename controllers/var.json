@@ -37,5 +37,10 @@
             "agrobox": "C",
             "up": "D"
         }
-    }
+    },
+    "transpprice": {
+        "day": "2000",
+        "night": "1000"
+    },
+    "repas": "3500"
 }

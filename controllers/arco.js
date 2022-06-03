@@ -1,213 +1,136 @@
-
-async function checkRequiredFiles(req, res, next) {
-    console.time();
-    try {
-        //fs
-        const fs = req.session.FS;
-        // file directory
-        const DIR = req.session.DIR;
-        // verifier le repertoire
-        if (!fs.existsSync(DIR)) {
-            await fs.mkdirSync(DIR);
-        }
-        // files
-        const FILES = await req.files;
-        // file keys
-        var FileKeys = await Object.keys(FILES);
-        // get the global salary sheet
-        const ARCOFile = await req.files['arco_salary'];
-        // check files
-        // NO Sheet file selected
-        if (!ARCOFile) {
-            return await res.send({
-                status: false,
-                icon: 'warning',
-                message: 'No ARCO Salary file uploaded!'
-            });
-        }
-        // No file that contains all data selected
-        if (FileKeys.length === 1) {
-            return await res.send({
-                status: false,
-                icon: 'warning',
-                message: 'No ARCO Report file uploaded!'
-            });
-        }
-        // SET VARIABLE
-        req.session.ARCOFile = ARCOFile;
-        req.session.FILEKEYS = FileKeys;
-        req.session.FILES = FILES;
-        return next();
-    } catch (err) {
-        console.log(err);
-        return res.send({
-            status: false,
-            icon: 'error',
-            message: 'Can not perform the program!'
-        });
-    }
-}
-
-async function startCorrection(req, res, next) {
-    try {
-        /* socket */
-        await req.app.get('socket').emit('action', 'Starting correction...');
-        // get passed variable
-        const ARCOFile = req.session.ARCOFile;
-        const DIR = req.session.DIR;
-        const script = req.session.SCRIPT;
-        // time to file
-        const time = await new Date().getTime();
-        // gs path
-        const ARCOPath = await `${DIR}/${ARCOFile.name.split('.xlsx')[0]}_${time}.xlsx`;
-        // COPY GSS FILE
-        await ARCOFile.mv(ARCOPath);
-
-        /* socket */
-        // read sheet output file
-        var wbo_sheet = await script.readWBxlsx(ARCOPath);
-        await req.app.get('socket').emit('action', 'Cloning: ' + ARCOFile.name);
-        
-        // create the output file name
-        let date = await new Date();
-        const OPFileName = await `${script.getDateNow().join(".")} ARCO SALARIES WORKING CORRECTED ${date.getTime()}.xlsx`;
-        const OPFilePath = await `${DIR}/${OPFileName}`;
-
-        // SET VARIABLE
-        req.session.WBO = wbo_sheet;
-        req.session.OPFILENAME = OPFileName;
-        req.session.OPFILEPATH = OPFilePath;
-        req.session.ARCOPATH = ARCOPath;
-        req.session.TIME = time;
-        
-        return next();
-    } catch (err) {
-        console.log(err);
-        return res.send({
-            status: false,
-            icon: 'error',
-            message: 'Can not perform the program!'
-        });
-    }
-}
-
-async function readingStyle(req, res, next) {
-    try {
-        const script = req.session.SCRIPT;
-        /* socket */
-        await req.app.get('socket').emit('action', 'Copying all style.');
-        req.session.WBOS = script.readWBxlsxstyle(req.session.ARCOPATH);
-        return next();
-    } catch (err) {
-        console.log(err);
-        return res.send({
-            status: false,
-            icon: 'error',
-            message: 'Can not perform the program!'
-        });
-    }
-}
-
-async function fetchAllData(req, res, next) {
-    try {
-        /* socket */
-        await req.app.get('socket').emit('action', 'Copying arco report files.');
-
-        // get passed variable
-        const FileKeys = req.session.FILEKEYS;
-        const FILES = req.session.FILES;
-        const DIR = req.session.DIR;
-        const script = req.session.SCRIPT;
-        const wbo_sheet = req.session.WBO;
-        const OPFilePath = req.session.OPFILEPATH;
-        const OPFileName = req.session.OPFILENAME;
-        const time = req.session.TIME;
-        const sheetIndex = 0;
-
-        // loop keys 
-        await FileKeys.splice(FileKeys.indexOf('arco_salary'), 1);
-        for (let i = 0; i < FileKeys.length; i++) {
-            let key = await FileKeys[i];
-            // switch key file
-            if (key.includes('arco_report')) {
-                // get file
-                let file = await FILES[key];
-                let filePath = await `${DIR}/${file.name.split('.xlsx')[0]}_${time}.xlsx`;
-
-                /* socket */
-                await req.app.get('socket').emit('action', 'Copying: ' + (file.name));
-                // move file
-                await file.mv(filePath);
-
-                /* socket */
-                await req.app.get('socket').emit('action', 'Reading: ' + (file.name));
-                // read excel file
-                var wbi = await script.readWBxlsxstyle(filePath);
-                // set file timeout to delete
-                await script.deleteFile(filePath, 25000);
-
-                /* socket */
-                await req.app.get('socket').emit('action', 'Fetching all data from: ' + (file.name));
-                //.get work sheet rh
-                var ws = await script.getWS(wbi, sheetIndex);
-                // check sheets
-                if (!ws) {
-                    await req.session.WARNINGS.push({
-                        status: false,
-                        icon: 'warning',
-                        message: `The ARCO Report file has a problem.`
-                    });
-                } else {
-                    try {
-                        /* socket */
-                        await req.app.get('socket').emit('action', 'Writing all data into: ' + OPFileName);
-                        // fetch all data required
-                        var data = await script.getArcoCellsValue(ws, req.session.LASTINDEX - 1);
-                        // set last index
-                        req.session.LASTINDEX += await data.rowNumber - 1;
-                        // if data is empty
-                        if (Object.keys(data.cellData).length <= 0) {
-                            req.session.WARNINGS.push({
-                                status: false,
-                                icon: 'warning',
-                                message: 'No data found in the ARCO Report file number ' + (i + 1) + '.'
-                            });
-                        } else {
-                            /* socket */
-                            await req.app.get('socket').emit('action', 'Saving all from: ' + (file.name));
-                            // save file
-                            let output = await script.copyAndPasteARCO(data.cellData, wbo_sheet);
-                            // save file
-                            await script.saveFile(script.combineStyle2(output, req.session.WBOS), OPFilePath);
-                        }
-                    } catch (error) {
-                        await console.log(error)
-                        await req.session.WARNINGS.push({
-                            status: false,
-                            icon: 'danger',
-                            message: 'There are somme errors.'
-                        });
-                    }
-                }
+"use strict";
+var Workbook = require('xlsx-populate');
+/**
+ * doCopy function
+ * @param {Workbook} wbo 
+ * @param {String} inputFilename 
+ * @returns Workbook
+ */
+const doCopy = async function(wbo, inputFilename) {
+    await Workbook.fromFileAsync(inputFilename).then(async (wb) => {
+        var sheet = wb.sheet(0);
+        let maxRowsNum = sheet.usedRange()._numRows;
+        let activeRow = (wbo.sheet(1).cell('M9').value() == 0 || wbo.sheet(1).cell('M9').value() === undefined) ? 0 : getLastFreeRow(wbo) - 2;
+        for (let ri = 25; ri < maxRowsNum; ri++) {
+            let colNums = sheet.row(ri)._cells.length;
+            // if row doesn't have empty value
+            if (!wb.sheet(0).cell('B' + ri).value() && !wb.sheet(0).cell('E' + ri).value()) break;
+            // number format
+            if (sheet.row(ri).cell(1).style('numberFormat') !== 'General')
+                wbo.sheet(0).row(ri - 23 + activeRow).cell(1).style('numberFormat', sheet.row(ri).cell(1).style('numberFormat'));
+            for (let ci = 1; ci <= colNums; ci++) {
+                wbo.sheet(0).row(ri - 23 + activeRow).cell(ci).value(sheet.row(ri).cell(ci).value());
             }
         }
-        console.timeEnd();
-        return next();
-    } catch (err) {
-        console.log(err);
-        return res.send({
-            status: false,
-            icon: 'error',
-            message: 'Can not perform the program!'
-        });
+        // SHEET 2
+        // change number of report or days
+        wbo.sheet(1).cell('M9').value((wbo.sheet(1).cell('M9').value() + 1) || 1);
+
+        // set formula
+        let numRow = wbo.sheet(0).usedRange()._numRows;
+        for (let i = 10; i < wbo.sheet(1).usedRange()._numRows; i++) {
+            wbo.sheet(1).cell(`D${i}`).formula(`SUMIF(${wbo.sheet(0).name()}!C2:'${wbo.sheet(0).name()}'!C${numRow},Summary!C${i},${wbo.sheet(0).name()}!D2:'${wbo.sheet(0).name()}'!D${numRow})`);
+            wbo.sheet(1).cell(`E${i}`).formula(`SUMIF(${wbo.sheet(0).name()}!F2:'${wbo.sheet(0).name()}'!F${numRow},Summary!C${i},${wbo.sheet(0).name()}!D2:'${wbo.sheet(0).name()}'!D${numRow})`);
+            wbo.sheet(1).cell(`G${i}`).formula(`SUMIF(${wbo.sheet(0).name()}!C2:'${wbo.sheet(0).name()}'!C${numRow},Summary!C${i},${wbo.sheet(0).name()}!E2:'${wbo.sheet(0).name()}'!E${numRow})`);
+        }
+    });
+    return wbo;
+};
+
+const getLastFreeRow = (wb) => {
+    let totalRow = wb.sheet(0).usedRange()._numRows;
+    let middleRow = Math.round(totalRow/2);
+    // check value of middle row cell if not empty
+    let start = (wb.sheet(0).cell('B' + middleRow).value()) ? middleRow : 2;
+    while (start <= totalRow) {
+        if (!wb.sheet(0).cell('B' + start).value() && !wb.sheet(0).cell('E' + start).value()) break;
+        start++;
     }
+    return start;
 }
 
+const readFileAsync = async (filename) => {
+    let wb = await Workbook.fromFileAsync(filename);
+    return wb;
+}
 
+/**
+ * Arco Analysis
+ * @param {String} filename 
+ * @param {Array} Data 
+ * @returns Array
+ */
+const getAndMergeData = async (filename, Data = []) => {
+    return await Workbook.fromFileAsync(filename).then(async (wbo) => {
+        let colsNum = wbo.sheet(0).usedRange()._numColumns;
+        for (let i = 1; i <= colsNum; i++) {
+            let m_code = wbo.sheet(0).row(14).cell(i).value();
+            if (m_code) {
+                let obj = {
+                    m_code: wbo.sheet(0).row(14).cell(i).value(),
+                    v_1: wbo.sheet(0).row(17).cell(i).value(),
+                    v_2: wbo.sheet(0).row(20).cell(i).value(),
+                    error: wbo.sheet(0).row(18).cell(i).value(),
+                }
+                Data.push(obj);
+            }
+        }
+        return Data;
+    }).catch((err) => {
+        console.log(err);
+        return new Array();
+    });
+}
+
+/**
+ * Filter data value and reduce to get its sum with some keys
+ * @param {Array} Data 
+ * @param {String} M_CODE 
+ * @param {String} valueOf Object key
+ * @returns {Number}
+ */
+const findDataValue = (Data, M_CODE, valueOf) => {
+    let array = Data.filter(e => e['m_code'] === M_CODE).map(e => e[valueOf]);
+    return (array.length > 0) ? array.reduce((a, b) => (parseFloat(a)) ? a + b: b) : 0;
+}
+
+/**
+ * Fill the template arco analysis file with the data in params
+ * @param {Workbook} wbo 
+ * @param {Array} Data 
+ * @param {String} dateInterval 
+ * @returns {Workbook}
+ */
+const fillTemplateWithData = (wbo, Data, dateInterval = "") => {
+    // change date in A1
+    wbo.sheet(0).cell('A1').value(dateInterval);
+
+    let rowNums = wbo.sheet(0).usedRange()._numRows;
+    for (let i = 4; i <= rowNums; i++) {
+        let m_code = wbo.sheet(0).cell('B' + i).value();
+        if (m_code) {
+            // v1
+            wbo.sheet(0).cell('C' + i).value( wbo.sheet(0).cell('C' + i).value() ?
+                findDataValue(Data, m_code, 'v_1') + wbo.sheet(0).cell('C' + i).value() : 
+                findDataValue(Data, m_code, 'v_1'));
+            // v2
+            wbo.sheet(0).cell('D' + i).value( wbo.sheet(0).cell('D' + i).value() ?
+                findDataValue(Data, m_code, 'v_2') + wbo.sheet(0).cell('D' + i).value() : 
+            findDataValue(Data, m_code, 'v_2'));
+            // error
+            wbo.sheet(0).cell('E' + i).value(wbo.sheet(0).cell('E' + i).value() ?
+                findDataValue(Data, m_code, 'error') + wbo.sheet(0).cell('E' + i).value() : 
+            findDataValue(Data, m_code, 'error'));
+        }
+    }
+    return wbo;
+}
 
 module.exports = {
-    checkRequiredFiles,
-    readingStyle,
-    startCorrection,
-    fetchAllData
+    readFileAsync,
+    getLastFreeRow,
+    doCopy,
+    findDataValue,
+    fillTemplateWithData,
+    getAndMergeData
 }

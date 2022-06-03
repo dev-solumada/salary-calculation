@@ -3,12 +3,7 @@
         <div class="col-md-12 grid-margin">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                <h4 class="font-weight-bold mb-0">Programmes <i class="ti-angle-right"></i> Correct ARCO</h4>
-                </div>
-                <div>
-                    <!-- <button type="button" class="btn btn-primary btn-icon-text btn-rounded">
-                    <i class="ti-clipboard btn-icon-prepend"></i>Report
-                    </button> -->
+                <h4 class="font-weight-bold mb-0">ARCO <i class="ti-angle-right"></i> ARCO SALARIES WORKING</h4>
                 </div>
             </div>
         </div>
@@ -110,26 +105,17 @@
                     </div>
                 </div>
             </div>
-            <div class="row" id="get-file" style="display:none;">
-                <div class="col-md-12 text-center">
-                    The program is too slow.
-                    Click here to get the file.
-                    <button type="button" onclick="getTheFile()" class="btn btn-primary">
-                        GET THE FILE
-                    </button>
-                </div>
-            </div>
             <div class="row">
                 <div class="col-md-12">
                     <div class="card-body">
                         <hr>
                         <h4 class="card-title"></h4>
                         <div class="template-demo text-center">
-                            <p class="text-muted">Click on the button below to start <code>The correction</code> and <code>Download</code> the Excel file.</p>
+                            <p class="text-muted">Click on the button below to start <code>The copy</code> and <code>Download</code> the Excel file.</p>
                             <p class="text-muted">But before that, make sure that you have uploaded at least a file for each columns.</p>
                             <button type="submit" role="button" class="btn btn-success text-white btn-icon-text" id="download">
                                 <i class="ti-download btn-icon-prepend"></i>                                                    
-                                Start Correction and Download the file
+                                Start Copy and Download the file
                             </button>
                             <div class="text-center">
                                 <small class="mt-2 text-muted" style="display: block;" id="downloading-p"></small>
@@ -161,7 +147,7 @@
             });
             socket.on('prepare-<%= user.email %>', data => {
                 if (!xhr.response) // the request timedout
-                    socket.emit('prepareoutput', 'do it as fast as you can my dear server.');
+                    socket.emit('prepareoutput-<%= user.email %>', 'do it as fast as you can my dear server.');
                 xhr.abort();
             });
             // ACTION
@@ -310,6 +296,49 @@
                 </select>
             </div>`;
             btn.parentElement.before(div);
+            const input = document.getElementById(`arco-report-${id}`)
+            input.nextElementSibling.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                if (e.target.classList.contains('form-control'))  {
+                    e.target.style.borderStyle = 'dashed';
+                    e.target.placeholder = 'Drop file here.';   
+                }
+            });
+            ['dragleave', 'dragend'].forEach(event => {
+                input.nextElementSibling.addEventListener(event, (e) => {
+                    if (e.target.classList.contains('form-control'))  {
+                        e.target.style.borderStyle = 'solid';
+                        e.target.placeholder = 'Upload Microsoft Excel file';
+                    }
+                });
+            });
+            input.nextElementSibling.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.target.placeholder = 'Upload Microsoft Excel file';
+                e.target.style.borderStyle = 'solid';
+                if (e.dataTransfer.files[0].type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+                    input.files = e.dataTransfer.files;
+                    input.nextElementSibling.firstElementChild.value = e.dataTransfer.files[0].name;
+                    let btn = input.nextElementSibling.firstElementChild.nextElementSibling;
+                    if (btn.previousElementSibling && btn.previousElementSibling.className === 'btn btn btn-inverse-danger btn-fw reset') {
+                        btn.previousElementSibling.remove();
+                    }
+                    let btnR = document.createElement('button');
+                    btnR.className = 'btn btn btn-inverse-danger btn-fw reset';
+                    let i = document.createElement('i');
+                    i.className = 'ti-share-alt btn-icon-prepend';
+                    btnR.append(i);
+                    btnR.append(document.createTextNode(' Reset'));
+                    
+                    btnR.addEventListener('click', function(e) {
+                        btnR.remove();
+                        input.files = null;
+                        btn.parentElement.firstElementChild.value = '';
+                    });
+                    btn.before(btnR);
+                }
+            });
+
         }
         function deleteARCOField(btn) {
             btn.parentElement.parentElement.remove();
@@ -328,19 +357,19 @@
             for (const input of document.querySelectorAll('input[type="file"]')) {
                 input.nextElementSibling.addEventListener('dragover', (e) => {
                     e.preventDefault();
-                    if (e.target.style.border)
+                    if (e.target.classList.contains('form-control'))  {
                         e.target.style.borderStyle = 'dashed';
-                    e.target.placeholder = 'Drop file here.';
+                        e.target.placeholder = 'Drop file here.';   
+                    }
                 });
                 ['dragleave', 'dragend'].forEach(event => {
-                    
-                    console.log (input.nextElementSibling)
                     input.nextElementSibling.addEventListener(event, (e) => {
-                        if (e.target.style.border)
-                        e.target.style.borderStyle = 'solid';
-                        e.target.placeholder = 'Upload Microsoft Excel file';
+                        if (e.target.classList.contains('form-control'))  {
+                            e.target.style.borderStyle = 'solid';
+                            e.target.placeholder = 'Upload Microsoft Excel file';
+                        }
                     });
-                })
+                });
                 input.nextElementSibling.addEventListener('drop', (e) => {
                     e.preventDefault();
                     e.target.placeholder = 'Upload Microsoft Excel file';

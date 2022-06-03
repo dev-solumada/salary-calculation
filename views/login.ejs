@@ -146,7 +146,7 @@
               if (this.readyState == 4 && this.status == 200) {
                   let response = JSON.parse(this.response);
                   if (response.status) {
-                    setCookie('csc='+response.username+separator+response.password, 760);
+                    // setCookie('csc='+response.username+separator+response.password, 760);
                     window.location = '/';
                   } else {
                       if (response.data) {
@@ -221,15 +221,6 @@
       return "";
     }
 
-    window.onload = () => {
-      console.log("passer ici");
-      let username = getCookie('csc').split(separator)[0];
-      let password = getCookie('csc').split(separator)[1];
-      if (username !== '' && password !== '') {
-        hasCookies(username, password);
-      }
-    }
-
     // set session from navigator
     const hasCookies = (username, password) => {
       var http = new XMLHttpRequest();
@@ -237,12 +228,20 @@
       http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
       http.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-          console.log("success");
+          if (this.response.status) {
+            window.location = '/home';
+          }
         }
       }
       http.send('username='+username+'&'+'password='+password);
     } 
 
+    
+    // let username = getCookie('csc').split(separator)[0];
+    // let password = getCookie('csc').split(separator)[1];
+    // if (username !== '' && password !== '') {
+    //   hasCookies(username, password);
+    // }
   </script>
 </body>
 

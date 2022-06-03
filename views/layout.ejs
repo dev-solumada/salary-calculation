@@ -1,3 +1,4 @@
+
 <% if (!login) { %>
   <!DOCTYPE html>
   <html lang="en">
@@ -31,16 +32,6 @@
             <span class="ti-view-list"></span>
           </button>
           <ul class="navbar-nav mr-lg-2">
-            <!-- <li class="nav-item nav-search d-none d-lg-block">
-              <div class="input-group">
-                <div class="input-group-prepend hover-cursor" id="navbar-search-icon">
-                  <span class="input-group-text" id="search">
-                    <i class="ti-search"></i>
-                  </span>
-                </div>
-                <input type="text" class="form-control" id="navbar-search-input" placeholder="Search now" aria-label="search" aria-describedby="search">
-              </div>
-            </li> -->
           </ul>
           <ul class="navbar-nav navbar-nav-right">
             <li class="nav-item dropdown">
@@ -59,10 +50,10 @@
                   </div>
                   <div class="item-content">
                     <h6 class="font-weight-normal"><%= notif.description %></h6>
-                    <% if ((notif.category === 'salary calculation' || notif.category === 'correct arco') && user.username === notif.user) { %>
+                    <% if ((notif.category === 'salary calculation' || notif.category === 'arco') && user.username === notif.user) { %>
                       <p class="font-weight-light small-text mb-0 text-muted">
                         <span class="text-primary"><%= notif.file %></span>.<br>
-                        <span class="text-dark"><%= notif.exists ? 'It will be deleted in an hour. Click here to show it.' : 'This file is no longer available.' %></span>
+                        <span class="text-dark"><%= notif.exists ? 'It will be deleted in 30 minutes. Click here to show it.' : 'This file is no longer available.' %></span>
                       </p>
                     <% } %>
                     <p class="font-weight-light small-text mb-0 text-muted">
@@ -78,10 +69,6 @@
                 <img src="/images/user.png" alt="profile"/>
               </a>
               <div class="dropdown-menu dropdown-menu-right navbar-dropdown" aria-labelledby="profileDropdown">
-                <!-- <a class="dropdown-item">
-                  <i class="ti-settings text-primary"></i>
-                  Settings
-                </a> -->
                 <a class="dropdown-item" href="#" onclick="logout()">
                   <i class="ti-power-off text-primary"></i>
                   Logout
@@ -99,22 +86,31 @@
         <!-- partial:partials/_sidebar.html -->
         <nav class="sidebar sidebar-offcanvas" id="sidebar">
           <ul class="nav">
+            <!-- HOME -->
             <li class="nav-item <%= active === 'home' ? 'active' : '' %>">
               <a class="nav-link" href="/home">
                 <i class="ti-home menu-icon"></i>
                 <span class="menu-title">Home</span>
               </a>
             </li>
-            <li class="nav-item <%= active === 'programmes' ? 'active' : '' %>">
+            <!-- SALARY CALCULATION -->
+            <li class="nav-item <%= active === 'salary-calculation' ? 'active' : '' %>">
+              <a class="nav-link" href="/salary-calculation">
+                <i class="ti-package menu-icon"></i>
+                <span class="menu-title">SALARY CALCULATION</span>
+              </a>
+            </li>
+            <!-- ARCO -->
+            <li class="nav-item <%= active === 'arco' ? 'active' : '' %>">
               <a class="nav-link" data-bs-toggle="collapse" href="#ui-basic" aria-expanded="false" aria-controls="ui-basic">
                 <i class="ti-package menu-icon"></i>
-                <span class="menu-title">Programmes</span>
+                <span class="menu-title">ARCO</span>
                 <i class="menu-arrow"></i>
               </a>
-              <div class="collapse <%= active === 'programmes' ? 'show' : '' %>" id="ui-basic">
+              <div class="collapse <%= active === 'arco' ? 'show' : '' %>" id="ui-basic">
                 <ul class="nav flex-column sub-menu">
-                  <li class="nav-item"><a class="nav-link <%= active_sub === 'salary-calculation' ? 'active' : '' %>" href="/salary-calculation">Salary Calculation</a></li>
-                  <li class="nav-item"><a class="nav-link <%= active_sub === 'correct-arco' ? 'active' : '' %>" href="/correct-arco">Correct ARCO</a></li>
+                  <li class="nav-item"><a class="nav-link <%= active_sub === "arco-salaries-working" ? 'active' : '' %>" href="/arco-salaries-working">ARCO SALARIES <br>WORKING</a></li>
+                  <li class="nav-item"><a class="nav-link <%= active_sub === "arco-analysis-working" ? 'active' : '' %>" href="/arco-analysis-working">ARCO ANALYSIS <br>WORKING</a></li>
                 </ul>
               </div>
             </li>
@@ -184,7 +180,7 @@
               })
           .then((willDelete) => {
               if (willDelete) {
-                deleteCookie('csc')
+                // deleteCookie('csc')
                 window.location = '/logout';
               }
           });
@@ -195,6 +191,54 @@
       const deleteCookie = (name) => {
         document.cookie = name + "=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;";
       };
+
+      
+    /**
+     *  COOKIES 
+     */
+
+    let separator = '-||-';
+    function setCookie(cdata, exdays) {
+      const d = new Date();
+      d.setTime(d.getTime() + (exdays*24*60*60*1000));
+      let expires = "expires="+ d.toUTCString();
+      document.cookie = cdata + ";"+ expires + ";path=/";
+    }
+
+    function getCookie(cname) {
+      let name = cname + "=";
+      let decodedCookie = decodeURIComponent(document.cookie);
+      let ca = decodedCookie.split(';');
+      for(let i = 0; i <ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') {
+          c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+          return c.substring(name.length, c.length);
+        }
+      }
+      return "";
+    }
+
+    // set session from navigator
+    const hasCookies = (username, password) => {
+      var http = new XMLHttpRequest();
+      http.open("POST", '/login', true);
+      http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+      http.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+        }
+      }
+      http.send('username='+username+'&'+'password='+password);
+    } 
+
+    
+    // let username = getCookie('csc').split(separator)[0];
+    // let password = getCookie('csc').split(separator)[1];
+    // if (username !== '' && password !== '') {
+    //   hasCookies(username, password);
+    // }
     </script>
   </body>
   
