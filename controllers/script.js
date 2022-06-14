@@ -5,7 +5,8 @@ const getWS = (wb, indexOfSheet) => {
 
 // get sheetname
 const getSheetIndex = (wb, sheetname) => {
-    return wb.SheetNames.indexOf(sheetname);
+    let index = wb.SheetNames.indexOf(sheetname);
+    return index > -1 ? index : null;
 }
 
 // nom des colonnes
@@ -22,6 +23,8 @@ const columsNames = {
     salaryARCO: 'SALARY ARCO',
     salaryUPC: 'SALARY UPC',
     salaryJEFACTURE: 'SALARY JeFACTURE',
+    salaryPWC: 'SALARY PWC',
+    salarySPOTCHECK: 'SALARY SPOTCHECK',
 };
 
 
@@ -95,6 +98,7 @@ const arrangeTRANSPORTS = (ws) => {
     let data = [];
     let data_trans = findData(ws, columsNames.transp).map(e => e.c);
     let temp = null;
+    
     data_trans.forEach(e => {
         data.push(e);
         if (temp !== null) {
@@ -191,7 +195,7 @@ const createOutput = (DATA_RH = [], wb) => {
             || ws[v].w === getVar().transpprice.day
             || ws[v].w === 'TRANSPORT (2000/day)'
             || new String(ws[v].w).match('REPAS'));
-            colsToFill = colsToFill.map(e => { return {c: e, v: ws[e]} });
+        colsToFill = colsToFill.map(e => { return {c: e, v: ws[e]} });
         // total transport
         // let total_col = Array.from(Object.keys(ws)).find(v => new String(ws[v].w).match('TOTAL'));
         let important_cols = ['A', 'B'];
@@ -326,7 +330,7 @@ function randomnNumberCode(length = 6) {
  */
 // ===========================================================
 
- const createOutputSalaryUp = (DATA_RH = [], wb) => {
+const createOutputSalaryUp = (DATA_RH = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
@@ -593,7 +597,7 @@ const createOutputSalaryUPC = (DATA_RH = [], wb) => {
         let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
         // target column to salary agrobox
         let colGSS = sheetColumn.gss['sheet'+(i+1)];
-        let colSalaryAgrobox = colGSS ? (colGSS['upc'] || null) : null;
+        let colSalaryUPC = colGSS ? (colGSS['upc'] || null) : null;
         
         // total transport
         let important_cols = ['A', 'B'];
@@ -611,8 +615,8 @@ const createOutputSalaryUPC = (DATA_RH = [], wb) => {
                     // salary 
                     if (columsNames.salaryUPC in info) {
                         // cols to fill
-                        if (colSalaryAgrobox) {
-                            let colIndex = colSalaryAgrobox+line;
+                        if (colSalaryUPC) {
+                            let colIndex = colSalaryUPC+line;
                             if (!ws[colIndex]) {
                                 ws[colIndex] = {t: 'n'}
                             }
@@ -768,6 +772,157 @@ const createOutputSalaryJEFACTURE = (JFACTURE_Data = [], wb) => {
 }
 
 
+// ===========================================================
+/**
+ * JeFACTURE
+ */
+// ===========================================================
+
+const getSalaryPWCData = (ws) => {
+    const XLSX = require('xlsx');
+    var data = [];
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    for (let rowNum = 1; rowNum <= range.e.r; rowNum++) {
+        // loo all cells in the current column
+        let obj = {};
+        // column alpha name O, N
+        for (let colNum = 13; colNum <= 14; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            // cell styled
+            const cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('O')) obj[columsNames.mcode] = cell.w;
+                if (cellName.includes('N')) obj[columsNames.salaryPWC] = parseFloat(cell.w) || 0;
+            }
+        }
+        // if keys exist
+        if (columsNames.mcode in obj && columsNames.salaryPWC in obj) 
+            data.push(obj);
+    }
+    return data;
+}
+
+const createOutputSalaryPWC = (PWC_Data = [], wb) => {
+    const xlsx = require('xlsx');
+    // creer un nouveau work book
+    var newWorkbook = wb;
+    const sheetColumn = getVar();
+    // loop through sheetindex 2 and 5
+    let sheetNum =  [2, 3, 6];
+    for (let i = 0; i < sheetNum.length; i++) {
+        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[sheetNum[i]-1]];
+        // target column to salary agrobox
+        let colGSS = sheetColumn.gss['sheet'+(sheetNum[i])];
+        let colSalaryPWC = colGSS ? (colGSS['pwc'] || null) : null;
+        // total transport
+        let important_col = 'B';
+        let first_A_col = Object.keys(ws).find(e => e.includes(important_col));
+        let line = parseInt(first_A_col.substring(1, first_A_col.length));
+        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        while (line <= rows.length) {
+            if (ws[important_col+line]) {
+                let mcode = new String(ws[important_col+line].w).trim();
+                // get info via the PWC data by only M-CODE
+                let info = PWC_Data.find(e => e[columsNames.mcode] === mcode);
+                if (info) {
+                    // salary 
+                    if (columsNames.salaryPWC in info) {
+                        // cols to fill
+                        if (colSalaryPWC) {
+                            let colIndex = colSalaryPWC+line;
+                            if (!ws[colIndex]) {
+                                ws[colIndex] = {t: 'n'}
+                            }
+                            ws[colIndex].v = info[columsNames.salaryPWC];
+                            ws[colIndex].w = new String(info[columsNames.salaryPWC]);
+                        }
+                    }
+                }
+            }
+            line ++;
+        }
+    }
+
+    return newWorkbook;
+}
+
+
+// ===========================================================
+/**
+ * JeFACTURE
+ */
+// ===========================================================
+
+const getSalarySPOTCHECKData = (ws) => {
+    const XLSX = require('xlsx');
+    var data = [];
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    for (let rowNum = 2; rowNum <= range.e.r; rowNum++) {
+        // loo all cells in the current column
+        let obj = {};
+        // column alpha name O, N
+        for (let colNum = 1; colNum <= range.e.c; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            // cell styled
+            const cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('B')) obj[columsNames.mcode] = cell.w;
+                if (cellName.includes('C')) obj[columsNames.number] = cell.w;
+                if (cellName.includes('J')) obj[columsNames.salarySPOTCHECK] =( parseFloat(cell.w) || 0) * parseFloat(getVar().spotckeck_mult);
+            }
+        }
+        // if keys exist
+        if (columsNames.mcode in obj && columsNames.salarySPOTCHECK in obj) 
+            data.push(obj);
+    }
+    return data;
+}
+
+const createOutputSalarySPOTCHECK = (SPOTCHECK_Data = [], wb) => {
+    const xlsx = require('xlsx');
+    // creer un nouveau work book
+    var newWorkbook = wb;
+    const sheetColumn = getVar();
+    // loop through sheetindex 2 and 5
+    let sheetNum =  [3, 7];
+    for (let i = 0; i < sheetNum.length; i++) {
+        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[sheetNum[i]-1]];
+        // target column to salary agrobox
+        let colGSS = sheetColumn.gss['sheet'+(sheetNum[i])];
+        let colSalarySPOTCHECK = colGSS ? (colGSS['spotcheck'] || null) : null;
+        // total transport
+        let important_cols = ['A', 'B'];
+        let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
+        let line = parseInt(first_A_col.substring(1, first_A_col.length));
+        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        while (line <= rows.length) {
+            if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
+                // numbering agent
+                let numbering = new String(ws[important_cols[0]+line].w).trim();
+                let mcode = new String(ws[important_cols[1]+line].w).trim();
+                // get info via the SPOTCHECK data by only M-CODE
+                let info = SPOTCHECK_Data.find(e => e[columsNames.mcode] === mcode && e[columsNames.number] === numbering);
+                if (info) {
+                    // salary 
+                    if (columsNames.salarySPOTCHECK in info) {
+                        // cols to fill
+                        if (colSalarySPOTCHECK) {
+                            let colIndex = colSalarySPOTCHECK+line;
+                            if (!ws[colIndex]) {
+                                ws[colIndex] = {t: 'n'}
+                            }
+                            ws[colIndex].v = info[columsNames.salarySPOTCHECK];
+                            ws[colIndex].w = new String(info[columsNames.salarySPOTCHECK]);
+                        }
+                    }
+                }
+            }
+            line ++;
+        }
+    }
+
+    return newWorkbook;
+}
 
 
 
@@ -803,5 +958,9 @@ module.exports = {
     getSalaryUPCData,
     createOutputSalaryUPC,
     getSalaryJEFACTUREData,
-    createOutputSalaryJEFACTURE
+    createOutputSalaryJEFACTURE,
+    getSalaryPWCData,
+    createOutputSalaryPWC,
+    getSalarySPOTCHECKData,
+    createOutputSalarySPOTCHECK
 };
