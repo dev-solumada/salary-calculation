@@ -78,7 +78,7 @@ const getAndMergeData = async (filename, Data = []) => {
         return Data;
     }).catch((err) => {
         console.log(err);
-        return new Array();
+        return Data;
     });
 }
 
@@ -96,7 +96,7 @@ const findDataValue = (Data, M_CODE, valueOf) => {
 
 /**
  * Fill the template arco analysis file with the data in params
- * @param {Workbook} wbo 
+ * @param {Workbook} wbo template
  * @param {Array} Data 
  * @param {String} dateInterval 
  * @returns {Workbook}

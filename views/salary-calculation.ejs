@@ -123,6 +123,40 @@
                                 </select>
                             </div>
                         </div>
+                        <!-- PWC -->
+                        <h4 class="card-title">PWC</h4>
+                        <p class="card-description">Field to upload <code>PWC SALARY</code> file.</p>
+                        <div class="template-demo">
+                            <div class="form-group">
+                                <input type="file" name="salary-pwc" id="salary-pwc" class="file-upload-default" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'salary-pwc')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="salary-agrobox-sheetname">
+                                </select>
+                            </div>
+                        </div>
+                        <!-- SPOTCHECK -->
+                        <h4 class="card-title">SPOTCHECK</h4>
+                        <p class="card-description">Field to upload <code>SPOTCHECK SALARY</code> file.</p>
+                        <div class="template-demo">
+                            <div class="form-group">
+                                <input type="file" name="salary-spotcheck" id="salary-spotcheck" class="file-upload-default" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'salary-spotcheck')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="salary-agrobox-sheetname">
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -203,13 +237,7 @@
         let loadingGif = document.getElementById('loading-gif');
         let downloadingP = document.getElementById('downloading-p');
         let warnings = document.getElementById('warnings');
-        var fileSelected1 = null,
-            fileSelected2 = null,
-            fileSelected3 = null,
-            fileSelected4 = null,
-            fileSelected5 = null;
-            fileSelected6 = null,
-            fileSelected7 = null;
+        var filesSelected = new Array(document.querySelectorAll('input[type="file"]').length).fill(null);
 
         function uploadClick(btn, id) {
             let inputfile = document.getElementById(id);
@@ -221,13 +249,25 @@
                         btn.previousElementSibling.remove();
                     }
                     if (inputfile.files.length > 0) {
-                        if (id === 'rapport-rh') fileSelected1 = inputfile.files;
-                        if (id === 'salary-up') fileSelected2 = inputfile.files;
-                        if (id === 'salary-agrobox') fileSelected3 = inputfile.files;
-                        if (id === 'salary-arco') fileSelected4 = inputfile.files;
-                        if (id === 'salary-upc') fileSelected5 = inputfile.files;
-                        if (id === 'salary-facture') fileSelected6 = inputfile.files;
-                        if (id === 'salary-sheet') fileSelected7 = inputfile.files;
+                        if (id === 'rapport-rh')
+                            filesSelected[0] = inputfile.files;
+                        if (id === 'salary-up')
+                            filesSelected[1] = inputfile.files;
+                        if (id === 'salary-agrobox')
+                            filesSelected[2] = inputfile.files;
+                        if (id === 'salary-arco')
+                            filesSelected[3] = inputfile.files;
+                        if (id === 'salary-upc')
+                            filesSelected[4] = inputfile.files;
+                        if (id === 'salary-facture')
+                            filesSelected[5] = inputfile.files;
+                        if (id === 'salary-pwc')
+                            filesSelected[6] = inputfile.files;
+                        if (id === 'salary-spotcheck')
+                            filesSelected[7] = inputfile.files;
+                        if (id === 'salary-sheet')
+                            filesSelected[filesSelected.length - 1] = inputfile.files;
+
                         let btnR = document.createElement('button');
                         btnR.className = 'btn btn btn-inverse-danger btn-fw reset';
                         let i = document.createElement('i');
@@ -245,13 +285,24 @@
                         btn.before(btnR);
                         
                     } else {
-                        if (id === 'rapport-rh') inputfile.files = fileSelected1;
-                        if (id === 'salary-up') inputfile.files = fileSelected2;
-                        if (id === 'salary-agrobox') inputfile.files = fileSelected3;
-                        if (id === 'salary-arco') inputfile.files = fileSelected4;
-                        if (id === 'salary-upc') inputfile.files = fileSelected5;
-                        if (id === 'salary-jefacture') inputfile.files = fileSelected6;
-                        if (id === 'salary-sheet') inputfile.files = fileSelected7;
+                        if (id === 'rapport-rh')
+                            inputfile.files = filesSelected[0];
+                        if (id === 'salary-up')
+                            inputfile.files = filesSelected[1];
+                        if (id === 'salary-agrobox')
+                            inputfile.files = filesSelected[2];
+                        if (id === 'salary-arco')
+                            inputfile.files = filesSelected[3];
+                        if (id === 'salary-upc')
+                            inputfile.files = filesSelected[4];
+                        if (id === 'salary-jefacture')
+                            inputfile.files = filesSelected[5];
+                        if (id === 'salary-pwc')
+                            inputfile.files = filesSelected[6];
+                        if (id === 'salary-spotcheck')
+                            inputfile.files = filesSelected[7];
+                        if (id === 'salary-sheet')
+                            inputfile.files = filesSelected[filesSelected.length - 1];
                     }
                     btn.parentElement.firstElementChild.value = inputfile.files[0].name;
                     let select = btn.parentElement.nextElementSibling;
@@ -288,8 +339,10 @@
             let file4 = document.getElementById('salary-arco');
             let file5 = document.getElementById('salary-upc');
             let file6 = document.getElementById('salary-jefacture');
-            let file7 = document.getElementById('salary-sheet');
-
+            let file7 = document.getElementById('salary-pwc');
+            let file8 = document.getElementById('salary-spotcheck');
+            let file9 = document.getElementById('salary-sheet');
+            
             let formData = new FormData();
             formData.append('rh_file', file1.files[0]);
             formData.append('salaryup_file', file2.files[0]);
@@ -297,7 +350,9 @@
             formData.append('salaryarco_file', file4.files[0]);
             formData.append('salaryupc_file', file5.files[0]);
             formData.append('salaryjefacture_file', file6.files[0]);
-            formData.append('sheet_file', file7.files[0]);
+            formData.append('salarypwc_file', file7.files[0]);
+            formData.append('salaryspotcheck_file', file8.files[0]);
+            formData.append('sheet_file', file9.files[0]);
 
             // post form data
             const xhr = new XMLHttpRequest();
@@ -310,7 +365,7 @@
                         link.setAttribute("href", '/' + xhr.response.file);
                         link.setAttribute("style","display:none");
                         link.setAttribute("download",xhr.response.file);
-                        document.body.appendChild(link);                                                        //needed for firefox
+                        document.body.appendChild(link);
                         link.click();
                         // hide loading gif and remove link.
                         downloadingP.textContent = 'Downloading...';
@@ -326,8 +381,11 @@
                             type: 'error',
                         })
                     }
+                    downloadBtn.disabled = false;
+                    loadingGif.style.opacity = '0';
+                    downloadingP.textContent = '';
+                    // show warnings
                     document.getElementById('warning-field').innerHTML = '';
-                    // show warning
                     if (Array.isArray(xhr.response.warnings) && xhr.response.warnings.length > 0) {
                         warnings.style.display = 'block';
                         xhr.response.warnings.forEach((warn, index) => {
@@ -337,9 +395,6 @@
                             </tr>`; 
                         });
                     }
-                    downloadBtn.disabled = false;
-                    loadingGif.style.opacity = '0';
-                    downloadingP.textContent = '';
                 }
             };
 

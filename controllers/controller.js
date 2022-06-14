@@ -470,7 +470,7 @@ router.route('/users-list').get(redirectLogin, checkType, async (req, res) => {
 /**
  * USERS - Manage access.
  */
- router.route('/manage-access').get(redirectLogin, checkType, async (req, res) => {
+router.route('/manage-access').get(redirectLogin, checkType, async (req, res) => {
     const user = req.session.userId;
     mongoose.connect(
         process.env.MONGO_URI,
@@ -493,7 +493,7 @@ router.route('/users-list').get(redirectLogin, checkType, async (req, res) => {
 /**
  * USERS - Edit user.
  */
- router.route('/edit-user/:email').all(redirectLogin, checkType, async (req, res) => {
+router.route('/edit-user/:email').all(redirectLogin, checkType, async (req, res) => {
     const userS = req.session.userId;
     mongoose.connect(
         process.env.MONGO_URI,
@@ -679,7 +679,7 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
 /**
  * PROGRAMME - Salary Calculation.
  */
- router.route('/salary-calculation').get(redirectLogin, async (req, res) => {
+router.route('/salary-calculation').get(redirectLogin, async (req, res) => {
     // notifications
     let notifs = await getNotifs();
     res.render('salary-calculation', {login: false, active: 'salary-calculation', active_sub: 'salary-calculation', year: new Date().getFullYear(), user: req.session.userId, notifs: notifs});
@@ -688,7 +688,7 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
 /**
  * UPLOAD - RH file and Salary Sheet file.
  */
- router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => { 
+router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => { 
     try {
         if(!req.files) {
             return res.send({
@@ -944,7 +944,7 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
                             }
                         }
                         break;
-                        // UPC
+                        // JEFACTURE
                         case 'salaryjefacture_file':
                             var sheetName = await 'Jefacture Salaris per agent';
                             var sheetIndex = await script.getSheetIndex(wbi, sheetName);
@@ -953,7 +953,7 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
                                 await Warnings.push({
                                     status: false,
                                     icon: 'warning',
-                                    message: `The UPC Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
+                                    message: `The JeFacture Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
                                 });
                             } else {
                                 try {
@@ -963,7 +963,7 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
                                         await Warnings.push({
                                             status: false,
                                             icon: 'warning',
-                                            message: 'No data found in the UPC Salary file! Please verify it.'
+                                            message: 'No data found in the JeFacture Salary file! Please verify it.'
                                         });
                                     } else {
                                         /* socket */
@@ -975,7 +975,79 @@ router.route('/add-user').post(checkSessionInPost, checkType, (req, res) => {
                                     await Warnings.push({
                                         status: false,
                                         icon: 'danger',
-                                        message: 'The UPC Salary file has a big problem.'
+                                        message: 'The JeFacture Salary file has a big problem.'
+                                    });
+                                }
+                            }
+                        break;
+                        // PWC
+                        case 'salarypwc_file':
+                            var sheetName = await 'PWC';
+                            var sheetIndex = await script.getSheetIndex(wbi, sheetName);
+                            ws = await script.getWS(wbi, sheetIndex || 0);
+                            if (!ws) {
+                                await Warnings.push({
+                                    status: false,
+                                    icon: 'warning',
+                                    message: `The PWC Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
+                                });
+                            } else {
+                                try {
+                                    data = await script.getSalaryPWCData(ws);
+                                    // if data is empty
+                                    if (data.length <= 0) {
+                                        await Warnings.push({
+                                            status: false,
+                                            icon: 'warning',
+                                            message: 'No data found in the PWC Salary file! Please verify it.'
+                                        });
+                                    } else {
+                                        /* socket */
+                                        await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
+                                        // if step one is done change the to the output file.
+                                        output = await script.createOutputSalaryPWC(data, output || wbo_sheet);
+                                    }
+                                } catch (error) {
+                                    await Warnings.push({
+                                        status: false,
+                                        icon: 'danger',
+                                        message: 'The PWC Salary file has a big problem.'
+                                    });
+                                }
+                            }
+                        break;
+                        // PWC
+                        case 'salaryspotcheck_file':
+                            var sheetName = await 'SPOTCHECK';
+                            // var sheetIndex = await script.getSheetIndex(wbi, sheetName);
+                            ws = await script.getWS(wbi, 0);
+                            if (!ws) {
+                                await Warnings.push({
+                                    status: false,
+                                    icon: 'warning',
+                                    message: `The SPOTCHECK Salary file has a problem. No "${sheetName}" sheetname found. Please verify the file.`
+                                });
+                            } else {
+                                try {
+                                    data = await script.getSalarySPOTCHECKData(ws);
+                                    // if data is empty
+                                    if (data.length <= 0) {
+                                        await Warnings.push({
+                                            status: false,
+                                            icon: 'warning',
+                                            message: 'No data found in the SPOTCHECK Salary file! Please verify it.'
+                                        });
+                                    } else {
+                                        /* socket */
+                                        await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
+                                        // if step one is done change the to the output file.
+                                        output = await script.createOutputSalarySPOTCHECK(data, output || wbo_sheet);
+                                    }
+                                } catch (error) {
+                                    await Warnings.push({
+                                        status: false,
+                                        icon: 'danger',
+                                        message: 'The SPOTCHECK Salary file has a big problem.'
                                     });
                                 }
                             }

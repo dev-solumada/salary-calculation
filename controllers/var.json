@@ -7,14 +7,17 @@
         },
         "sheet2": {
             "arco": "C",
-            "up": "I"
+            "up": "I",
+            "pwc": "G"
         },
         "sheet3": {
             "arco": "C",
             "up": "E",
             "upc": "G",
             "agrobox": "H",
-            "jefacture": "N"
+            "jefacture": "N",
+            "pwc": "I",
+            "spotcheck": "D"
         },
         "sheet4": {
             "agrobox": "E",
@@ -27,11 +30,13 @@
             "agrobox": "H"
         },
         "sheet6": {
-            "arco": "D"
+            "arco": "D",
+            "pwc": "E"
         },
         "sheet7": {
             "agrobox": "C",
-            "up": "D"
+            "up": "D",
+            "spotcheck": "F"
         },
         "sheet9": {
             "agrobox": "C",
@@ -42,5 +47,6 @@
         "day": "2000",
         "night": "1000"
     },
-    "repas": "3500"
+    "repas": "3500",
+    "spotckeck_mult": "100"
 }
