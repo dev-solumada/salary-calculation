@@ -8,7 +8,8 @@
         "sheet2": {
             "arco": "C",
             "up": "I",
-            "pwc": "G"
+            "pwc": "G",
+            "willemen": "E"
         },
         "sheet3": {
             "arco": "C",
@@ -17,7 +18,8 @@
             "agrobox": "H",
             "jefacture": "N",
             "pwc": "I",
-            "spotcheck": "D"
+            "spotcheck": "D",
+            "willemen": "K"
         },
         "sheet4": {
             "agrobox": "E",
@@ -48,5 +50,10 @@
         "night": "1000"
     },
     "repas": "3500",
-    "spotckeck_mult": "100"
+    "spotckeck_mult": "100",
+    "willemen": {
+        "ai": "30",
+        "id": "50",
+        "limosa": "100"
+    }
 }

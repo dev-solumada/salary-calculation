@@ -788,7 +788,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                     await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
                                     // output file
                                     // if step one is done change the to the output file.
-                                    output = await script.createOutput(data, output || wbo_sheet);
+                                    output = await script.outTR(data, output || wbo_sheet);
                                 }
                             } catch (error) {
                                 await Warnings.push({
@@ -812,7 +812,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                             });
                         } else {
                             try {
-                                data = await script.getSalaryUPData(ws);
+                                data = await script.fetchUPData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
                                     await Warnings.push({
@@ -824,7 +824,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                     /* socket */
                                     await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
-                                    output = await script.createOutputSalaryUp(data, output || wbo_sheet);
+                                    output = await script.outUp(data, output || wbo_sheet);
                                 }
                             } catch (error) {
                                 console.log(error)
@@ -849,7 +849,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                             });
                         } else {
                             try {
-                                data = await script.getSalaryAgroboxData(ws);
+                                data = await script.fetchAgroboxData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
                                     await Warnings.push({
@@ -861,7 +861,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                     /* socket */
                                     await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
-                                    output = await script.createOutputSalaryAGROBOX(data, output || wbo_sheet);
+                                    output = await script.outAGROBOX(data, output || wbo_sheet);
                                 }
                             } catch (error) {
                                 await Warnings.push({
@@ -884,7 +884,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                             });
                         } else {
                             try {
-                                data = await script.getSalaryArcoData(ws);
+                                data = await script.fetchArcoData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
                                     await Warnings.push({
@@ -896,7 +896,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                     /* socket */
                                     await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
-                                    output = await script.createOutputSalaryARCO(data, output || wbo_sheet);
+                                    output = await script.outARCO(data, output || wbo_sheet);
                                 }
                             } catch (error) {
                                 await console.log(error);
@@ -921,7 +921,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                             });
                         } else {
                             try {
-                                data = await script.getSalaryUPCData(ws);
+                                data = await script.fetchUPCData(ws);
                                 // if data is empty
                                 if (data.length <= 0) {
                                     await Warnings.push({
@@ -933,7 +933,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                     /* socket */
                                     await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
-                                    output = await script.createOutputSalaryUPC(data, output || wbo_sheet);
+                                    output = await script.outPWC(data, output || wbo_sheet);
                                 }
                             } catch (error) {
                                 await Warnings.push({
@@ -957,7 +957,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                 });
                             } else {
                                 try {
-                                    data = await script.getSalaryJEFACTUREData(ws);
+                                    data = await script.fetchJEFACTUREData(ws);
                                     // if data is empty
                                     if (data.length <= 0) {
                                         await Warnings.push({
@@ -969,7 +969,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                         /* socket */
                                         await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
                                         // if step one is done change the to the output file.
-                                        output = await script.createOutputSalaryJEFACTURE(data, output || wbo_sheet);
+                                        output = await script.outJEFACTURE(data, output || wbo_sheet);
                                     }
                                 } catch (error) {
                                     await Warnings.push({
@@ -993,7 +993,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                 });
                             } else {
                                 try {
-                                    data = await script.getSalaryPWCData(ws);
+                                    data = await script.fetchPWCData(ws);
                                     // if data is empty
                                     if (data.length <= 0) {
                                         await Warnings.push({
@@ -1005,7 +1005,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                         /* socket */
                                         await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
                                         // if step one is done change the to the output file.
-                                        output = await script.createOutputSalaryPWC(data, output || wbo_sheet);
+                                        output = await script.outPWC(data, output || wbo_sheet);
                                     }
                                 } catch (error) {
                                     await Warnings.push({
@@ -1029,7 +1029,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                 });
                             } else {
                                 try {
-                                    data = await script.getSalarySPOTCHECKData(ws);
+                                    data = await script.fetchSPOTCHECKData(ws);
                                     // if data is empty
                                     if (data.length <= 0) {
                                         await Warnings.push({
@@ -1041,13 +1041,49 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                         /* socket */
                                         await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
                                         // if step one is done change the to the output file.
-                                        output = await script.createOutputSalarySPOTCHECK(data, output || wbo_sheet);
+                                        output = await script.outSPOTCHECK(data, output || wbo_sheet);
                                     }
                                 } catch (error) {
+
                                     await Warnings.push({
                                         status: false,
                                         icon: 'danger',
                                         message: 'The SPOTCHECK Salary file has a big problem.'
+                                    });
+                                }
+                            }
+                        break;
+                        // WILLEMEN
+                        case 'salarywillemen_file':
+                            ws = await script.getWS(wbi, 0);
+                            if (!ws) {
+                                await Warnings.push({
+                                    status: false,
+                                    icon: 'warning',
+                                    message: `The Willemen Salary file has a problem.`
+                                });
+                            } else {
+                                try {
+                                    data = await script.fetchWillemenData(ws);
+                                    // if data is empty
+                                    if (data.length <= 0) {
+                                        await Warnings.push({
+                                            status: false,
+                                            icon: 'warning',
+                                            message: 'No data found in the WILLEMEN Salary file! Please verify it.'
+                                        });
+                                    } else {
+                                        /* socket */
+                                        await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
+                                        // if step one is done change the to the output file.
+                                        output = await script.outWillemen(data, output || wbo_sheet);
+                                    }
+                                } catch (error) {
+                                    console.log(error);
+                                    await Warnings.push({
+                                        status: false,
+                                        icon: 'danger',
+                                        message: 'The WILLEMEN Salary file has a big problem.'
                                     });
                                 }
                             }

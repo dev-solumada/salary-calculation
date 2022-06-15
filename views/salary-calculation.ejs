@@ -157,6 +157,23 @@
                                 </select>
                             </div>
                         </div>
+                        <!-- Willemen -->
+                        <h4 class="card-title">WILLEMEN</h4>
+                        <p class="card-description">Field to upload <code>WILLEMEN SALARY</code> file.</p>
+                        <div class="template-demo">
+                            <div class="form-group">
+                                <input type="file" name="salary-willemen" id="salary-willemen" class="file-upload-default" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel">
+                                <div class="input-group col-xs-12">
+                                    <input type="text" class="form-control file-upload-info" disabled="" placeholder="Upload Microsoft Excel file">
+                                    <button class="file-upload-browse btn btn-primary text-white" type="button" onclick="uploadClick(this, 'salary-willemen')">
+                                        <i class="ti-file btn-icon-prepend"></i>
+                                        Upload file
+                                    </button>
+                                </div>
+                                <select class="form-control mt-1" style="display: none;" id="salary-agrobox-sheetname">
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-6">
@@ -265,6 +282,8 @@
                             filesSelected[6] = inputfile.files;
                         if (id === 'salary-spotcheck')
                             filesSelected[7] = inputfile.files;
+                        if (id === 'salary-willemen')
+                            filesSelected[8] = inputfile.files;
                         if (id === 'salary-sheet')
                             filesSelected[filesSelected.length - 1] = inputfile.files;
 
@@ -301,6 +320,8 @@
                             inputfile.files = filesSelected[6];
                         if (id === 'salary-spotcheck')
                             inputfile.files = filesSelected[7];
+                        if (id === 'salary-willemen')
+                            inputfile.files = filesSelected[8];
                         if (id === 'salary-sheet')
                             inputfile.files = filesSelected[filesSelected.length - 1];
                     }
@@ -341,7 +362,8 @@
             let file6 = document.getElementById('salary-jefacture');
             let file7 = document.getElementById('salary-pwc');
             let file8 = document.getElementById('salary-spotcheck');
-            let file9 = document.getElementById('salary-sheet');
+            let file9 = document.getElementById('salary-willemen');
+            let file10 = document.getElementById('salary-sheet');
             
             let formData = new FormData();
             formData.append('rh_file', file1.files[0]);
@@ -352,7 +374,8 @@
             formData.append('salaryjefacture_file', file6.files[0]);
             formData.append('salarypwc_file', file7.files[0]);
             formData.append('salaryspotcheck_file', file8.files[0]);
-            formData.append('sheet_file', file9.files[0]);
+            formData.append('salarywillemen_file', file9.files[0]);
+            formData.append('sheet_file', file10.files[0]);
 
             // post form data
             const xhr = new XMLHttpRequest();
