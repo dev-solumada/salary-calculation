@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+
 const NotifSchema = mongoose.Schema({
     category: {
         type: String,

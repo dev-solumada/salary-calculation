@@ -25,6 +25,13 @@ const columsNames = {
     salaryJEFACTURE: 'SALARY JeFACTURE',
     salaryPWC: 'SALARY PWC',
     salarySPOTCHECK: 'SALARY SPOTCHECK',
+    willemen: { 
+        salary: 'SALARY WILLEMEN',
+        ai: 'AI DOCUMENT',
+        id: 'ID DOCUMENT',
+        limosa: 'LIMOSA DOCUMENT',
+    },
+    vandorp: 'SALARY VANDORP'
 };
 
 
@@ -49,7 +56,7 @@ const findData = (ws, key) => {
     let data = [];
     Object.keys(ws).forEach(e => {
         if (ws[e].v && new String(ws[e].v).match(key))
-            data.push({c: e, v: ws[e]});
+            data[data.length] = {c: e, v: ws[e]};
     })
     return data;
 }
@@ -100,7 +107,7 @@ const arrangeTRANSPORTS = (ws) => {
     let temp = null;
     
     data_trans.forEach(e => {
-        data.push(e);
+        data[data.length] = e;
         if (temp !== null) {
             if (new String(e).substring(0, 1) === 'N' && new String(e).substring(1, 2) === new String(temp).substring(1, 2)) {
                 let data_comb = [temp, e];
@@ -120,8 +127,8 @@ const getColumnName = (ws, columnName) => {
 const getGroupedRequiredCol = (ws) => {
     // group column
     let MCODE_col = getColumnName(ws, 'M-CODE');
-    let NUMBERINGAGENT_col = getColumnName(ws,'Numbering Agent');
-    let NOMBREREPAS_col = getColumnName(ws,'NOMBRE DE REPAS');
+    let NUMBERINGAGENT_col = getColumnName(ws, columsNames.number);
+    let NOMBREREPAS_col = getColumnName(ws, columsNames.repas);
     let TRANSPORT_col = arrangeTRANSPORTS(ws);
     return groupCol(MCODE_col, NUMBERINGAGENT_col, NOMBREREPAS_col, TRANSPORT_col);
 }
@@ -133,13 +140,13 @@ const groupCol = (...cols) => {
         cols.forEach(el => {
             if (el[i].constructor === Array) {
                 el[i].forEach(e => {
-                    coldata.push(e);
+                    coldata[coldata.length] = e;
                 })
             } else {
-                coldata.push(el[i]);
+                coldata[coldata.length] = el[i];
             }
         })
-        data.push(coldata)
+        data[data.length] = coldata;
     }
     return data;
 }
@@ -173,7 +180,7 @@ const fetchData = (ws, group_col_data = []) => {
                 }
             })
             // ajouter dans le tableau l'objet qu'on a crée.
-            jsonArray.push(obj);
+            jsonArray[jsonArray.length] = obj;
             // passer dans la ligne suivante.
             line++;
         }
@@ -183,7 +190,7 @@ const fetchData = (ws, group_col_data = []) => {
 }
 
 
-const createOutput = (DATA_RH = [], wb) => {
+const outTR = (DATA_RH = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
@@ -330,7 +337,7 @@ function randomnNumberCode(length = 6) {
  */
 // ===========================================================
 
-const createOutputSalaryUp = (DATA_RH = [], wb) => {
+const outUp = (DATA_RH = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
@@ -376,7 +383,7 @@ const createOutputSalaryUp = (DATA_RH = [], wb) => {
     return newWorkbook;
 }
 
-const getSalaryUPData = (ws) => {
+const fetchUPData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
@@ -396,7 +403,7 @@ const getSalaryUPData = (ws) => {
         }
         // if keys exist
         if (columsNames.mcode in obj && columsNames.salaryUP in obj) 
-            data.push(obj);
+            data[data.length] = obj;
     }
     return data;
 }
@@ -407,7 +414,7 @@ const getSalaryUPData = (ws) => {
  */
 // ===========================================================
 
-const createOutputSalaryAGROBOX = (DATA_RH = [], wb) => {
+const outAGROBOX = (DATA_RH = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
@@ -454,7 +461,7 @@ const createOutputSalaryAGROBOX = (DATA_RH = [], wb) => {
     
 }
 
-const getSalaryAgroboxData = (ws) => {
+const fetchAgroboxData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
@@ -474,7 +481,7 @@ const getSalaryAgroboxData = (ws) => {
         }
         // if keys exist
         if ((columsNames.mcode in obj || columsNames.number in obj) && columsNames.salaryAGROBOX in obj) 
-            data.push(obj);
+            data[data.length] = obj;
     }
     return data;
 }
@@ -485,16 +492,21 @@ const getSalaryAgroboxData = (ws) => {
  */
 // ===========================================================
 
-const createOutputSalaryARCO = (DATA_RH = [], wb) => {
+const outARCO = (ARCO_Data = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
     const sheetColumn = getVar();
-    // parcourir tous les feuilles SHEETS
-    for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
-        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
-        // target column to salary arco
-        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < ARCO_Data.length; i++) {
+        let dataItem = ARCO_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary pwc
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalaryArco = colGSS ? (colGSS['arco'] || null)  : null;
         
         // total transport
@@ -507,7 +519,7 @@ const createOutputSalaryARCO = (DATA_RH = [], wb) => {
                 let numberingagent = new String(ws[important_cols[0]+line].w).trim();
                 let mcode = new String(ws[important_cols[1]+line].w).trim();
                 // get info via RH by M-CODE and Numbering Agent
-                let info = DATA_RH.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
+                let info = ARCO_Data.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
                 if (info) {
                     // salary 
                     if (columsNames.salaryARCO in info) {
@@ -531,7 +543,7 @@ const createOutputSalaryARCO = (DATA_RH = [], wb) => {
     
 }
 
-const getSalaryArcoData = (ws) => {
+const fetchArcoData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
@@ -552,7 +564,7 @@ const getSalaryArcoData = (ws) => {
         }
         // if keys exist
         if ((columsNames.mcode in obj || columsNames.number in obj) && columsNames.salaryARCO in obj) 
-            data.push(obj);
+            data[data.length] = obj;
     }
     return data;
 }
@@ -563,7 +575,7 @@ const getSalaryArcoData = (ws) => {
  * UPC
  */
 // ===========================================================
- const getSalaryUPCData = (ws) => {
+ const fetchUPCData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
@@ -582,23 +594,27 @@ const getSalaryArcoData = (ws) => {
         }
         // if keys exist
         if (columsNames.mcode in obj && columsNames.salaryUPC in obj) 
-            data.push(obj);
+            data[data.length] = obj;
     }
     return data;
 }
 
-const createOutputSalaryUPC = (DATA_RH = [], wb) => {
+const outUPC = (UPC_Data = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
     const sheetColumn = getVar();
-    // parcourir tous les feuilles SHEETS
-    for (let i = 2; i <= 4; i++) {
-        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
-        // target column to salary agrobox
-        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < UPC_Data.length; i++) {
+        let dataItem = UPC_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary pwc
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalaryUPC = colGSS ? (colGSS['upc'] || null) : null;
-        
         // total transport
         let important_cols = ['A', 'B'];
         let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
@@ -610,7 +626,7 @@ const createOutputSalaryUPC = (DATA_RH = [], wb) => {
                 let numberingagent = new String(ws[important_cols[0]+line].w).trim();
                 let mcode = new String(ws[important_cols[1]+line].w).trim();
                 // get info via RH by M-CODE and Numbering Agent
-                let info = DATA_RH.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
+                let info = UPC_Data.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
                 if (info) {
                     // salary 
                     if (columsNames.salaryUPC in info) {
@@ -654,8 +670,8 @@ const deleteFile = (filePath, ms) => {
 
 
 /**
- * Add point to have a clear date
- * 0000000 => 00.00.0000
+ * Add some points to have a clear date
+ * ####### => ##.##.####
  */
 const getDateInFileName = (filename) => {
     try {
@@ -679,7 +695,21 @@ const getFirstDateInOutputFilename = (filename = '') => {
 }
 
 const getVar = () => {
-    const json = require('./var.json');
+    const mongoose = require('mongoose');
+    var json = require('./var.json');
+    mongoose.connect(
+        process.env.MONGO_URI,
+        {
+            useUnifiedTopology: true,
+            UseNewUrlParser: true,
+        }
+    ).then(async () => {
+        // get vars on the database
+        let vars = await JSONVarSchema.findOne();
+        json = JSON.parse(vars.json);
+    }).catch(err => {
+        json = require('./var.json');
+    });
     return json;
 }
 
@@ -701,7 +731,7 @@ const accessDB = async (func) => {
  */
 // ===========================================================
 
-const getSalaryJEFACTUREData = (ws) => {
+const fetchJEFACTUREData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
@@ -720,21 +750,26 @@ const getSalaryJEFACTUREData = (ws) => {
         }
         // if keys exist
         if (columsNames.mcode in obj && columsNames.salaryJEFACTURE in obj) 
-            data.push(obj);
+            data[data.length] = obj;
     }
     return data;
 }
 
-const createOutputSalaryJEFACTURE = (JFACTURE_Data = [], wb) => {
+const outJEFACTURE = (JFACTURE_Data = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
     const sheetColumn = getVar();
-    // parcourir tous les feuilles SHEETS
-    for (let i = 2; i < 3; i++) {
-        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
-        // target column to salary agrobox
-        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < JFACTURE_Data.length; i++) {
+        let dataItem = JFACTURE_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary pwc
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalaryJEFACTURE = colGSS ? (colGSS['jefacture'] || null) : null;
         
         // total transport
@@ -778,7 +813,7 @@ const createOutputSalaryJEFACTURE = (JFACTURE_Data = [], wb) => {
  */
 // ===========================================================
 
-const getSalaryPWCData = (ws) => {
+const fetchPWCData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
@@ -786,44 +821,50 @@ const getSalaryPWCData = (ws) => {
         // loo all cells in the current column
         let obj = {};
         // column alpha name O, N
-        for (let colNum = 13; colNum <= 14; colNum++) {
+        for (let colNum = range.s.c; colNum <= 14; colNum++) {
             let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
             // cell styled
             const cell = ws[cellName];
             if (cell) {
-                if (cellName.includes('O')) obj[columsNames.mcode] = cell.w;
-                if (cellName.includes('N')) obj[columsNames.salaryPWC] = parseFloat(cell.w) || 0;
+                if (cellName.includes('B')) obj[columsNames.number] = cell?.w || '';
+                if (cellName.includes('C')) obj[columsNames.mcode] = cell?.w || '';
+                if (cellName.includes('O')) obj[columsNames.salaryPWC] = parseFloat(cell?.w) || 0;
             }
         }
         // if keys exist
-        if (columsNames.mcode in obj && columsNames.salaryPWC in obj) 
-            data.push(obj);
+        if (columsNames.mcode in obj && columsNames.salaryPWC in obj)
+            data[data.length] = obj;
     }
     return data;
 }
 
-const createOutputSalaryPWC = (PWC_Data = [], wb) => {
+const outPWC = (PWC_Data = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
     const sheetColumn = getVar();
-    // loop through sheetindex 2 and 5
-    let sheetNum =  [2, 3, 6];
-    for (let i = 0; i < sheetNum.length; i++) {
-        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[sheetNum[i]-1]];
-        // target column to salary agrobox
-        let colGSS = sheetColumn.gss['sheet'+(sheetNum[i])];
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < PWC_Data.length; i++) {
+        let dataItem = PWC_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary pwc
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalaryPWC = colGSS ? (colGSS['pwc'] || null) : null;
         // total transport
-        let important_col = 'B';
-        let first_A_col = Object.keys(ws).find(e => e.includes(important_col));
+        let important_cols = ['A', 'B'];
+        let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
         let line = parseInt(first_A_col.substring(1, first_A_col.length));
         const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
         while (line <= rows.length) {
-            if (ws[important_col+line]) {
-                let mcode = new String(ws[important_col+line].w).trim();
+            if (ws[important_cols[1]+line]) {
+                let number = new String(ws[important_cols[0]+line]?.w ?? '').trim();
+                let mcode = new String(ws[important_cols[1]+line]?.w ?? '').trim();
                 // get info via the PWC data by only M-CODE
-                let info = PWC_Data.find(e => e[columsNames.mcode] === mcode);
+                let info = PWC_Data.find(e => e[columsNames.mcode] === mcode && e[columsNames.number] === number);
                 if (info) {
                     // salary 
                     if (columsNames.salaryPWC in info) {
@@ -853,42 +894,45 @@ const createOutputSalaryPWC = (PWC_Data = [], wb) => {
  */
 // ===========================================================
 
-const getSalarySPOTCHECKData = (ws) => {
+const fetchSPOTCHECKData = (ws) => {
     const XLSX = require('xlsx');
     var data = [];
     var range = XLSX.utils.decode_range(ws['!ref']);
     for (let rowNum = 2; rowNum <= range.e.r; rowNum++) {
         // loo all cells in the current column
-        let obj = {};
-        // column alpha name O, N
+        let obj = {};// column alpha name O, N
         for (let colNum = 1; colNum <= range.e.c; colNum++) {
             let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
             // cell styled
             const cell = ws[cellName];
             if (cell) {
-                if (cellName.includes('B')) obj[columsNames.mcode] = cell.w;
-                if (cellName.includes('C')) obj[columsNames.number] = cell.w;
-                if (cellName.includes('J')) obj[columsNames.salarySPOTCHECK] =( parseFloat(cell.w) || 0) * parseFloat(getVar().spotckeck_mult);
+                if (cellName.includes('B')) obj[columsNames.mcode] = cell?.w;
+                if (cellName.includes('C')) obj[columsNames.number] = cell?.w;
+                if (cellName.includes('J')) obj[columsNames.salarySPOTCHECK] =( parseFloat(cell?.w) || 0) * parseFloat(getVar().spotckeck_mult);
             }
         }
         // if keys exist
         if (columsNames.mcode in obj && columsNames.salarySPOTCHECK in obj) 
-            data.push(obj);
+            data[data.length] = obj;
     }
     return data;
 }
 
-const createOutputSalarySPOTCHECK = (SPOTCHECK_Data = [], wb) => {
+const outSPOTCHECK = (SPOTCHECK_Data = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
     const sheetColumn = getVar();
-    // loop through sheetindex 2 and 5
-    let sheetNum =  [3, 7];
-    for (let i = 0; i < sheetNum.length; i++) {
-        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[sheetNum[i]-1]];
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < SPOTCHECK_Data.length; i++) {
+        let dataItem = SPOTCHECK_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
         // target column to salary agrobox
-        let colGSS = sheetColumn.gss['sheet'+(sheetNum[i])];
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalarySPOTCHECK = colGSS ? (colGSS['spotcheck'] || null) : null;
         // total transport
         let important_cols = ['A', 'B'];
@@ -924,43 +968,237 @@ const createOutputSalarySPOTCHECK = (SPOTCHECK_Data = [], wb) => {
     return newWorkbook;
 }
 
+/**
+ * FETCH WILLEMEN DATA
+ * @param {Workbook} ws 
+ * @returns Array
+ */
 
+const fetchWillemenData = (ws) => {
+    const XLSX = require('xlsx');
+    var data = [];
+    var jsonVar = getVar();
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    var [ai, id, limosa] = [
+        new String(ws['D25']?.w).replace('MGA', ''),
+        new String(ws['D26']?.w).replace('MGA', ''),
+        new String(ws['D27']?.w).replace('MGA', '')
+    ];
+    for (let rowNum = 1; rowNum <= range.e.r; rowNum++) {
+        // loo all cells in the current column
+        let obj = {};
+        // column alpha name O, N
+        for (let colNum = 0; colNum <= range.e.c; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            // cell styled
+            const cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('B')) obj[columsNames.number] = cell?.w;
+                if (cellName.includes('C')) obj[columsNames.mcode] = cell?.w;
+                if (cellName.includes('E')) obj[columsNames.willemen.ai] = cell?.v * (parseFloat(ai) || parseFloat(jsonVar.willemen.ai));
+                if (cellName.includes('F')) obj[columsNames.willemen.id] = cell?.v * (parseFloat(id) || parseFloat(jsonVar.willemen.id));
+                if (cellName.includes('G')) obj[columsNames.willemen.limosa] = cell?.v * (parseFloat(limosa) || parseFloat(jsonVar.willemen.limosa));
+            }
+        }
+        // if keys exist
+        if (columsNames.mcode in obj) {
+            obj[columsNames.willemen.salary] = (obj[columsNames.willemen.ai] || 0) + (obj[columsNames.willemen.id] || 0) + (obj[columsNames.willemen.limosa] || 0);
+            data[data.length] = obj;
+        }
+    }
+    return data;
+}  
+
+const outWillemen = (WILLEMEN_Data = [],  wb) => {
+    const xlsx = require('xlsx');
+    // creer un nouveau work book
+    var newWorkbook = wb;
+    const sheetColumn = getVar();
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < WILLEMEN_Data.length; i++) {
+        let dataItem = WILLEMEN_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary agrobox
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
+        let colSalaryWILLEMEN = colGSS ? (colGSS['willemen'] || null) : null;
+        // total transport
+        let important_cols = ['A', 'B'];
+        let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
+        let line = parseInt(first_A_col.substring(1, first_A_col.length));
+        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        while (line <= rows.length) {
+            if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
+                // numbering agent
+                let numbering = new String(ws[important_cols[0]+line].w).trim();
+                let mcode = new String(ws[important_cols[1]+line].w).trim();
+                // get info via the WILLEMEN data by only M-CODE
+                let info = WILLEMEN_Data.find(e => e[columsNames.mcode] === mcode && e[columsNames.number] === numbering);
+                if (info) {
+                    // salary 
+                    if (columsNames.willemen.salary in info) {
+                        // cols to fill
+                        if (colSalaryWILLEMEN) {
+                            let colIndex = colSalaryWILLEMEN+line;
+                            if (!ws[colIndex]) {
+                                ws[colIndex] = {t: 'n'}
+                            }
+                            ws[colIndex].v = info[columsNames.willemen.salary];
+                            ws[colIndex].w = new String(info[columsNames.willemen.salary]);
+                        }
+                    }
+                }
+            }
+            line ++;
+        }
+    }
+
+    return newWorkbook;
+}
+
+
+/**
+ * FETCH WILLEMEN DATA
+ * @param {Workbook} ws 
+ * @returns Array
+ */
+
+const fetchVanDorpData = (ws) => {
+    const XLSX = require('xlsx');
+    var data = [];
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    for (let rowNum = 1; rowNum <= range.e.r; rowNum++) {
+        // loo all cells in the current column
+        let obj = {};
+        // column alpha name O, N
+        for (let colNum = 0; colNum <= range.e.c; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            // cell styled
+            const cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('B')) obj[columsNames.number] = cell?.w;
+                if (cellName.includes('C')) obj[columsNames.mcode] = cell?.w;
+                if (cellName.includes('P')) obj[columsNames.vandorp] = parseFloat(cell?.v) || 0;
+            }
+        }
+        // if keys exist
+        if (columsNames.mcode in obj) {
+            data[data.length] = obj;
+        }
+    }
+    return data;
+}  
+
+const outVanDorp = (VANDORP_Data = [],  wb) => {
+    const xlsx = require('xlsx');
+    // creer un nouveau work book
+    var newWorkbook = wb;
+    const sheetColumn = getVar();
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < VANDORP_Data.length; i++) {
+        let dataItem = VANDORP_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary agrobox
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
+        let colSalaryVanDorp = colGSS ? (colGSS['vandorp'] || null) : null;
+        // total transport
+        let important_cols = ['A', 'B'];
+        let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
+        let line = parseInt(first_A_col.substring(1, first_A_col.length));
+        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        while (line <= rows.length) {
+            if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
+                // numbering agent
+                let numbering = new String(ws[important_cols[0]+line].w).trim();
+                let mcode = new String(ws[important_cols[1]+line].w).trim();
+                // get info via the WILLEMEN data by only M-CODE
+                let info = VANDORP_Data.find(e => e[columsNames.mcode] === mcode && e[columsNames.number] === numbering);
+                if (info) {
+                    // salary 
+                    if (columsNames.vandorp in info) {
+                        // cols to fill
+                        if (colSalaryVanDorp) {
+                            let colIndex = colSalaryVanDorp+line;
+                            if (!ws[colIndex]) {
+                                ws[colIndex] = {t: 'n'}
+                            }
+                            ws[colIndex].v = info[columsNames.vandorp];
+                            ws[colIndex].w = new String(info[columsNames.vandorp]);
+                        }
+                    }
+                }
+            }
+            line ++;
+        }
+    }
+
+    return newWorkbook;
+}
 
 // export functions
 module.exports = {
     accessDB,
+    // read excel file
     readWBxlsx,
     readWBxlsxstyle,
+    // copy style with combination
     combineStyle,
-    arrangeTRANSPORTS,
-    getColumnName,
-    groupCol,
-    fetchData,
-    createOutput,
-    createOutputSalaryUp,
+    // save xlsx file
     saveFile,
+    // get worksheet by index of the sheet
     getWS,
-    getGroupedRequiredCol,
+    // code for auth
     randomCode,
     randomnNumberCode,
     colsIndexNames,
-    getSalaryUPData,
-    getSalaryAgroboxData,
-    createOutputSalaryAGROBOX,
-    getSalaryArcoData,
-    createOutputSalaryARCO,
+    // others functions
     getDateNow,
     getSheetIndex,
     deleteFile,
     getVar,
     getDateInFileName,
     getFirstDateInOutputFilename,
-    getSalaryUPCData,
-    createOutputSalaryUPC,
-    getSalaryJEFACTUREData,
-    createOutputSalaryJEFACTURE,
-    getSalaryPWCData,
-    createOutputSalaryPWC,
-    getSalarySPOTCHECKData,
-    createOutputSalarySPOTCHECK
+    
+    // fetch transport & répas
+    arrangeTRANSPORTS,
+    groupCol,
+    fetchData,
+    getColumnName,
+    getGroupedRequiredCol,
+    outTR, 
+    // fetch UP
+    fetchUPData,
+    outUp,
+    // fetch UPC data
+    fetchUPCData,
+    outUPC,
+    // fetch agrobox data
+    fetchAgroboxData,
+    outAGROBOX,
+    // fetch arco data
+    fetchArcoData,
+    outARCO,
+    // fetch JeFacture data
+    fetchJEFACTUREData,
+    outJEFACTURE,
+    // fetch PWC data
+    fetchPWCData,
+    outPWC,
+    // fetch SPOTCHECK data
+    fetchSPOTCHECKData,
+    outSPOTCHECK,
+    // fetch Willemen data
+    fetchWillemenData,
+    outWillemen,
+    // fetch VanDorp data
+    fetchVanDorpData,
+    outVanDorp
+
 };

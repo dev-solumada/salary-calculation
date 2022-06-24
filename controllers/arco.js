@@ -72,7 +72,7 @@ const getAndMergeData = async (filename, Data = []) => {
                     v_2: wbo.sheet(0).row(20).cell(i).value(),
                     error: wbo.sheet(0).row(18).cell(i).value(),
                 }
-                Data.push(obj);
+                Data[Data.length] = obj;
             }
         }
         return Data;

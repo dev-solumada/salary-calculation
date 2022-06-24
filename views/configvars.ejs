@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Configs Var</title>
+  <!-- plugins:css -->
+  <link rel="stylesheet" href="/vendors/ti-icons/css/themify-icons.css">
+  <link rel="stylesheet" href="/vendors/base/vendor.bundle.base.css">
+  <!-- endinject -->
+  <!-- plugin css for this page -->
+  <!-- End plugin css for this page -->
+  <!-- inject:css -->
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- endinject -->
+  <link rel="shortcut icon" href="/images/optumin-solution-logo.png" />
+</head>
+
+<body>
+  <div class="container-scroller">
+    <div class="container-fluid page-body-wrapper full-page-wrapper">
+      <div class="content-wrapper d-flex align-items-stretch auth auth-img-bg">
+        <div class="row flex-grow bg-white">
+          <div class="col-lg-12 d-flex align-items-center justify-content-center">
+            <div class="auth-form-transparent text-left p-1">
+              <h4>Var Configs</h4>
+              <h6 class="font-weight-light">Be carefull</h6>
+              <form class="pt-3" method="post" action="/login">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <textarea class="form-control" id="vars" rows="30" style="font-family: consolas;"><%= jsonVar.json %> </textarea>
+                            <input type="hidden" id="id" value="<%= jsonVar._id %> ">
+                            <br>
+                            <button type="submit" class="btn btn-primary text-white">SET VARIABLES</button>
+                        </div>
+                    </div>
+                </div>
+                
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- content-wrapper ends -->
+    </div>
+    <!-- page-body-wrapper ends -->
+  </div>
+  <!-- container-scroller -->
+  <!-- plugins:js -->
+  <script src="/vendors/base/vendor.bundle.base.js"></script>
+  <!-- endinject -->
+  <!-- inject:js -->
+  <script src="/js/off-canvas.js"></script> 
+  <script src="/js/hoverable-collapse.js"></script>
+  <script src="/js/template.js"></script>
+  <script src="/js/todolist.js"></script>
+  <script src="/js/sweetalert.min.js"></script>
+  <!-- endinject -->
+  <script>
+    let submitBtn = document.getElementById('submit');
+    let loadingGif = document.getElementById('loading-gif');
+
+    document.forms[0].addEventListener('submit', (e) => {
+        e.preventDefault();
+        let vars = document.getElementById('vars');
+
+        // username
+        try {
+            if (!JSON.parse(vars.value)) {
+                return alert('Please, enter a valid json');
+            }
+            var http = new XMLHttpRequest();
+            http.open("POST", '/configvars', true);
+            http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+            http.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    if (JSON.parse(this.response).status) {
+                        alert('config vars successfully changed!');
+                    }
+                }
+            }
+            http.send('vars='+vars.value);
+
+        } catch {
+            return alert('Please, enter a valid json');
+        }
+
+    });
+  </script>
+</body>
+</html>
