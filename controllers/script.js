@@ -31,6 +31,7 @@ const columsNames = {
         id: 'ID DOCUMENT',
         limosa: 'LIMOSA DOCUMENT',
     },
+    vandorp: 'SALARY VANDORP'
 };
 
 
@@ -491,16 +492,21 @@ const fetchAgroboxData = (ws) => {
  */
 // ===========================================================
 
-const outARCO = (DATA_RH = [], wb) => {
+const outARCO = (ARCO_Data = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
     const sheetColumn = getVar();
-    // parcourir tous les feuilles SHEETS
-    for (let i = 0; i < newWorkbook.SheetNames.length; i++) {
-        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
-        // target column to salary arco
-        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < ARCO_Data.length; i++) {
+        let dataItem = ARCO_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary pwc
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalaryArco = colGSS ? (colGSS['arco'] || null)  : null;
         
         // total transport
@@ -513,7 +519,7 @@ const outARCO = (DATA_RH = [], wb) => {
                 let numberingagent = new String(ws[important_cols[0]+line].w).trim();
                 let mcode = new String(ws[important_cols[1]+line].w).trim();
                 // get info via RH by M-CODE and Numbering Agent
-                let info = DATA_RH.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
+                let info = ARCO_Data.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
                 if (info) {
                     // salary 
                     if (columsNames.salaryARCO in info) {
@@ -593,18 +599,22 @@ const fetchArcoData = (ws) => {
     return data;
 }
 
-const outUPC = (DATA_RH = [], wb) => {
+const outUPC = (UPC_Data = [], wb) => {
     const xlsx = require('xlsx');
     // creer un nouveau work book
     var newWorkbook = wb;
     const sheetColumn = getVar();
-    // parcourir tous les feuilles SHEETS
-    for (let i = 2; i <= 4; i++) {
-        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
-        // target column to salary agrobox
-        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < UPC_Data.length; i++) {
+        let dataItem = UPC_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary pwc
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalaryUPC = colGSS ? (colGSS['upc'] || null) : null;
-        
         // total transport
         let important_cols = ['A', 'B'];
         let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
@@ -616,7 +626,7 @@ const outUPC = (DATA_RH = [], wb) => {
                 let numberingagent = new String(ws[important_cols[0]+line].w).trim();
                 let mcode = new String(ws[important_cols[1]+line].w).trim();
                 // get info via RH by M-CODE and Numbering Agent
-                let info = DATA_RH.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
+                let info = UPC_Data.find(e => e[columsNames.number] === numberingagent && e[columsNames.mcode] === mcode);
                 if (info) {
                     // salary 
                     if (columsNames.salaryUPC in info) {
@@ -660,8 +670,8 @@ const deleteFile = (filePath, ms) => {
 
 
 /**
- * Add point to have a clear date
- * 0000000 => 00.00.0000
+ * Add some points to have a clear date
+ * ####### => ##.##.####
  */
 const getDateInFileName = (filename) => {
     try {
@@ -685,7 +695,21 @@ const getFirstDateInOutputFilename = (filename = '') => {
 }
 
 const getVar = () => {
-    const json = require('./var.json');
+    const mongoose = require('mongoose');
+    var json = require('./var.json');
+    mongoose.connect(
+        process.env.MONGO_URI,
+        {
+            useUnifiedTopology: true,
+            UseNewUrlParser: true,
+        }
+    ).then(async () => {
+        // get vars on the database
+        let vars = await JSONVarSchema.findOne();
+        json = JSON.parse(vars.json);
+    }).catch(err => {
+        json = require('./var.json');
+    });
     return json;
 }
 
@@ -736,11 +760,16 @@ const outJEFACTURE = (JFACTURE_Data = [], wb) => {
     // creer un nouveau work book
     var newWorkbook = wb;
     const sheetColumn = getVar();
-    // parcourir tous les feuilles SHEETS
-    for (let i = 2; i < 3; i++) {
-        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[i]];
-        // target column to salary agrobox
-        let colGSS = sheetColumn.gss['sheet'+(i+1)];
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < JFACTURE_Data.length; i++) {
+        let dataItem = JFACTURE_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary pwc
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalaryJEFACTURE = colGSS ? (colGSS['jefacture'] || null) : null;
         
         // total transport
@@ -814,12 +843,16 @@ const outPWC = (PWC_Data = [], wb) => {
     // creer un nouveau work book
     var newWorkbook = wb;
     const sheetColumn = getVar();
-    // loop through sheetindex 2 and 5
-    let sheetNum =  [2, 3, 6];
-    for (let i = 0; i < sheetNum.length; i++) {
-        let ws = newWorkbook.Sheets[newWorkbook.SheetNames[sheetNum[i]-1]];
-        // target column to salary agrobox
-        let colGSS = sheetColumn.gss['sheet'+(sheetNum[i])];
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < PWC_Data.length; i++) {
+        let dataItem = PWC_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary pwc
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalaryPWC = colGSS ? (colGSS['pwc'] || null) : null;
         // total transport
         let important_cols = ['A', 'B'];
@@ -873,9 +906,9 @@ const fetchSPOTCHECKData = (ws) => {
             // cell styled
             const cell = ws[cellName];
             if (cell) {
-                if (cellName.includes('B')) obj[columsNames.mcode] = cell.w;
-                if (cellName.includes('C')) obj[columsNames.number] = cell.w;
-                if (cellName.includes('J')) obj[columsNames.salarySPOTCHECK] =( parseFloat(cell.w) || 0) * parseFloat(getVar().spotckeck_mult);
+                if (cellName.includes('B')) obj[columsNames.mcode] = cell?.w;
+                if (cellName.includes('C')) obj[columsNames.number] = cell?.w;
+                if (cellName.includes('J')) obj[columsNames.salarySPOTCHECK] =( parseFloat(cell?.w) || 0) * parseFloat(getVar().spotckeck_mult);
             }
         }
         // if keys exist
@@ -897,6 +930,7 @@ const outSPOTCHECK = (SPOTCHECK_Data = [], wb) => {
         let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
         if (!sheetName) continue;
         let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
         // target column to salary agrobox
         let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalarySPOTCHECK = colGSS ? (colGSS['spotcheck'] || null) : null;
@@ -967,7 +1001,7 @@ const fetchWillemenData = (ws) => {
             }
         }
         // if keys exist
-        if (columsNames.mcode in obj && columsNames.mcode in obj) {
+        if (columsNames.mcode in obj) {
             obj[columsNames.willemen.salary] = (obj[columsNames.willemen.ai] || 0) + (obj[columsNames.willemen.id] || 0) + (obj[columsNames.willemen.limosa] || 0);
             data[data.length] = obj;
         }
@@ -987,6 +1021,7 @@ const outWillemen = (WILLEMEN_Data = [],  wb) => {
         let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
         if (!sheetName) continue;
         let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
         // target column to salary agrobox
         let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
         let colSalaryWILLEMEN = colGSS ? (colGSS['willemen'] || null) : null;
@@ -1024,43 +1059,146 @@ const outWillemen = (WILLEMEN_Data = [],  wb) => {
     return newWorkbook;
 }
 
+
+/**
+ * FETCH WILLEMEN DATA
+ * @param {Workbook} ws 
+ * @returns Array
+ */
+
+const fetchVanDorpData = (ws) => {
+    const XLSX = require('xlsx');
+    var data = [];
+    var range = XLSX.utils.decode_range(ws['!ref']);
+    for (let rowNum = 1; rowNum <= range.e.r; rowNum++) {
+        // loo all cells in the current column
+        let obj = {};
+        // column alpha name O, N
+        for (let colNum = 0; colNum <= range.e.c; colNum++) {
+            let cellName = XLSX.utils.encode_cell({r: rowNum, c: colNum});
+            // cell styled
+            const cell = ws[cellName];
+            if (cell) {
+                if (cellName.includes('B')) obj[columsNames.number] = cell?.w;
+                if (cellName.includes('C')) obj[columsNames.mcode] = cell?.w;
+                if (cellName.includes('P')) obj[columsNames.vandorp] = parseFloat(cell?.v) || 0;
+            }
+        }
+        // if keys exist
+        if (columsNames.mcode in obj) {
+            data[data.length] = obj;
+        }
+    }
+    return data;
+}  
+
+const outVanDorp = (VANDORP_Data = [],  wb) => {
+    const xlsx = require('xlsx');
+    // creer un nouveau work book
+    var newWorkbook = wb;
+    const sheetColumn = getVar();
+    // loop through agents to find sheets name by numbering
+    for (let i = 0; i < VANDORP_Data.length; i++) {
+        let dataItem = VANDORP_Data[i];
+        // find sheet by agentnumbering
+        let sheetName = newWorkbook.SheetNames.find(e => e?.substring(0, 2) === dataItem[columsNames.number]?.substring(0, 2));
+        if (!sheetName) continue;
+        let ws = newWorkbook.Sheets[sheetName];
+        if (!ws) continue;
+        // target column to salary agrobox
+        let colGSS = sheetColumn.gss['sheet'+(newWorkbook.SheetNames.indexOf(sheetName) + 1)];
+        let colSalaryVanDorp = colGSS ? (colGSS['vandorp'] || null) : null;
+        // total transport
+        let important_cols = ['A', 'B'];
+        let first_A_col = Object.keys(ws).find(e => e.includes(important_cols[0]));
+        let line = parseInt(first_A_col.substring(1, first_A_col.length));
+        const rows = xlsx.utils.sheet_to_json(ws, {header:1, blankrows: true});
+        while (line <= rows.length) {
+            if (ws[important_cols[0]+line] && ws[important_cols[1]+line]) {
+                // numbering agent
+                let numbering = new String(ws[important_cols[0]+line].w).trim();
+                let mcode = new String(ws[important_cols[1]+line].w).trim();
+                // get info via the WILLEMEN data by only M-CODE
+                let info = VANDORP_Data.find(e => e[columsNames.mcode] === mcode && e[columsNames.number] === numbering);
+                if (info) {
+                    // salary 
+                    if (columsNames.vandorp in info) {
+                        // cols to fill
+                        if (colSalaryVanDorp) {
+                            let colIndex = colSalaryVanDorp+line;
+                            if (!ws[colIndex]) {
+                                ws[colIndex] = {t: 'n'}
+                            }
+                            ws[colIndex].v = info[columsNames.vandorp];
+                            ws[colIndex].w = new String(info[columsNames.vandorp]);
+                        }
+                    }
+                }
+            }
+            line ++;
+        }
+    }
+
+    return newWorkbook;
+}
+
 // export functions
 module.exports = {
     accessDB,
+    // read excel file
     readWBxlsx,
     readWBxlsxstyle,
+    // copy style with combination
     combineStyle,
-    arrangeTRANSPORTS,
-    getColumnName,
-    groupCol,
-    fetchData,
-    outTR, 
-    outUp,
-    fetchUPData,
+    // save xlsx file
     saveFile,
+    // get worksheet by index of the sheet
     getWS,
-    getGroupedRequiredCol,
+    // code for auth
     randomCode,
     randomnNumberCode,
     colsIndexNames,
-    fetchAgroboxData,
-    outAGROBOX,
-    fetchArcoData,
-    outARCO,
+    // others functions
     getDateNow,
     getSheetIndex,
     deleteFile,
     getVar,
     getDateInFileName,
     getFirstDateInOutputFilename,
+    
+    // fetch transport & répas
+    arrangeTRANSPORTS,
+    groupCol,
+    fetchData,
+    getColumnName,
+    getGroupedRequiredCol,
+    outTR, 
+    // fetch UP
+    fetchUPData,
+    outUp,
+    // fetch UPC data
     fetchUPCData,
     outUPC,
+    // fetch agrobox data
+    fetchAgroboxData,
+    outAGROBOX,
+    // fetch arco data
+    fetchArcoData,
+    outARCO,
+    // fetch JeFacture data
     fetchJEFACTUREData,
     outJEFACTURE,
+    // fetch PWC data
     fetchPWCData,
     outPWC,
+    // fetch SPOTCHECK data
     fetchSPOTCHECKData,
     outSPOTCHECK,
+    // fetch Willemen data
     fetchWillemenData,
-    outWillemen
+    outWillemen,
+    // fetch VanDorp data
+    fetchVanDorpData,
+    outVanDorp
+
 };

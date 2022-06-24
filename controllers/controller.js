@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
 const UserSchema = require('../models/UserSchema');
 const SCSchema = require('../models/SCSchema');
 const NotifSchema = require('../models/NotifSchema');
+const JSONVarSchema = require('../models/JSONVarSchema');
 const nodemailer = require('nodemailer');
 const moment = require('moment');
 var Session = {};
@@ -933,7 +934,7 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                     /* socket */
                                     await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
                                     // if step one is done change the to the output file.
-                                    output = await script.outPWC(data, output || wbo_sheet);
+                                    output = await script.outUPC(data, output || wbo_sheet);
                                 }
                             } catch (error) {
                                 await Warnings.push({
@@ -1084,6 +1085,42 @@ router.route('/upload-xlsx').post(checkSessionInPost, async (req, res) => {
                                         status: false,
                                         icon: 'danger',
                                         message: 'The WILLEMEN Salary file has a big problem.'
+                                    });
+                                }
+                            }
+                        break;
+                        
+                        // VANDORP
+                        case 'salaryvandorp_file':
+                            ws = await script.getWS(wbi, 0);
+                            if (!ws) {
+                                await Warnings.push({
+                                    status: false,
+                                    icon: 'warning',
+                                    message: `The VAN DORP Salary file has a problem.`
+                                });
+                            } else {
+                                try {
+                                    data = await script.fetchVanDorpData(ws);
+                                    // if data is empty
+                                    if (data.length <= 0) {
+                                        await Warnings.push({
+                                            status: false,
+                                            icon: 'warning',
+                                            message: 'No data found in the VAN DORP Salary file! Please verify it.'
+                                        });
+                                    } else {
+                                        /* socket */
+                                        await req.app.get('socket').emit('action-' + req.session.userId.email, 'Writing all data fetched into: ' + OPFileName);
+                                        // if step one is done change the to the output file.
+                                        output = await script.outVanDorp(data, output || wbo_sheet);
+                                    }
+                                } catch (error) {
+                                    console.log(error);
+                                    await Warnings.push({
+                                        status: false,
+                                        icon: 'danger',
+                                        message: 'The VAN DORP Salary file has a big problem.'
                                     });
                                 }
                             }
@@ -1462,6 +1499,47 @@ router.route('/arco-start-check').post(async (req, res) => {
         });
     }
 });
+
+router.route('/configvars').all((req, res) => {
+    if (req.method === 'GET') {
+        mongoose.connect(
+            process.env.MONGO_URI,
+            MongooOptions
+        ).then(async () => {
+            var jsonVar = await JSONVarSchema.find();
+            // unless jsonVar exists
+            if (jsonVar.length === 0) {
+                new JSONVarSchema({}).save();
+            }
+            
+            res.render('configvars', {login: true, year: new Date().getFullYear(), jsonVar: await JSONVarSchema.findOne()});
+        }).catch(err => {
+            res.send({
+                target: 'database',
+                status: false,
+                message: 'Unable to connect the database.'
+            });
+        });
+    } else {
+        const { vars, id } = req.body;
+        console.log(vars, id);
+        mongoose.connect(
+            process.env.MONGO_URI,
+            MongooOptions
+        ).then(async () => {
+            // update vars
+            await JSONVarSchema.findOneAndUpdate({customId: 1}, {json: vars});
+            res.send({status: true});
+        }).catch(err => {
+            console.log(err);
+            res.send({
+                target: 'database',
+                status: false,
+                message: 'Unable to connect the database.'
+            });
+        });
+    }
+})
 
 
 module.exports = router;
